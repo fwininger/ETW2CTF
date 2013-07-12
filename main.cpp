@@ -156,12 +156,12 @@ namespace {
 	void convertString(char* o_buffer, LPWSTR i_string, int length = -1)
 	{
 		int i = 0 ;
-		while(i_string[i] != L'\0')
+		while (i_string[i] != L'\0')
 		{
 			o_buffer[i] = i_string[i];
 			i++;
 
-			if(length !=-1 && i >= length)
+			if (length !=-1 && i >= length)
 				break;
 		}
 		o_buffer[i] = '\0';

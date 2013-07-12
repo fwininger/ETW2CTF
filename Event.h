@@ -52,7 +52,7 @@ public :
 	FIELDTYPE type;
 
 	// Field Name
-	string name;
+	std::string name;
 
 public :
 	// equals
@@ -68,10 +68,10 @@ class Event
 	UCHAR eventid;
 
 	// List of eventfield
-	vector<Eventfield*> fields;
+	std::vector<Eventfield*> fields;
 
 	// Name of the event
-	string name;
+	std::string name;
 
 	// error status, true if the event has error
 	bool init;
@@ -85,7 +85,7 @@ public:
 	// Test the guid, opcode, version, eventid
 	bool sameID(Event*);
 
-	// Complet equality
+	// Complete equality
 	bool equals(Event*);
 
 	// Print Metadata
@@ -96,15 +96,15 @@ public:
 
 private:
 
-	// initalize the event
+	// initialize the event
 	void load(PEVENT_RECORD);
 
 	DWORD loadEventField(TRACE_EVENT_INFO* pinfo, DWORD i, USHORT indent);
 
 	void renameField();
 
-	// return -1 if not found
-	// else return the position in the vector
+	// returns -1 if not found
+	// otherwise returns the position in the vector
 	size_t existField(Eventfield*);
 
 };
