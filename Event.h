@@ -34,8 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <tdh.h>
 
-using namespace std ;
-
 class Eventfield
 {
 
@@ -94,7 +92,7 @@ public:
 	void PrintMetadata(FILE* metadata, int id);
 
 	// return true if the event has an error
-	bool error() { return init; } 
+	bool error() { return init; }
 
 private:
 

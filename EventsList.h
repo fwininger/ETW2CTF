@@ -35,7 +35,7 @@ class EventsList
 {
 
 	// List of eventfield
-	vector<Event*> events;
+	std::vector<Event*> events;
 
 public :
 	// Constructor
@@ -49,7 +49,7 @@ public :
 	bool add(Event* pevent);
 
 	// Is the event already in the vector
-	bool isExist(Event* pevent); 
+	bool isExist(Event* pevent);
 
 	// Get the index of a event in the list
 	int getIndex(Event* pevent);

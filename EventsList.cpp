@@ -62,14 +62,15 @@ EventsList::EventsList()
 
 EventsList::~EventsList()
 {
-	for(int i=0;i<events.size();i++)
+	for (int i=0; i<events.size(); i++)
 		delete events[i];
 }
 
 
 bool EventsList::add(Event* pevent)
 {
-	if(isExist(pevent)) return false;
+	if (isExist(pevent))
+		return false;
 
 	events.push_back(pevent);
 	return true;
@@ -77,9 +78,9 @@ bool EventsList::add(Event* pevent)
 
 bool EventsList::isExist(Event* pevent)
 {
-	for(int i=0; i<events.size();++i)
+	for(int i=0; i < events.size(); ++i)
 	{
-		if(pevent->equals(events[i])) 
+		if(pevent->equals(events[i]))
 			return true;
 	}
 	return false;
@@ -87,9 +88,9 @@ bool EventsList::isExist(Event* pevent)
 
 int EventsList::getIndex(Event* pevent)
 {
-	for(int i=0; i<events.size();++i)
+	for (int i=0; i < events.size(); ++i)
 	{
-		if(pevent->equals(events[i])) 
+		if (pevent->equals(events[i]))
 			return i;
 	}
 	return -1;
@@ -235,4 +236,3 @@ void EventsList::printMetadata(FILE* metadata,EVENT_TRACE_LOGFILE trace)
 	}
 
 }
-

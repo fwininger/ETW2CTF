@@ -41,7 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Event.h"
 #include "EventsList.h"
 
-#pragma comment(lib, "ws2_32.lib") 
+#pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "tdh.lib")
 
 //
@@ -151,19 +151,20 @@ namespace {
 		WriteUInt64(pTrace->LogfileHeader.EndTime);
 	}
 
-	/* Convert Wstring with \null caracter to a standard string */
+	/* Convert wstring with \null character to a standard string */
 	// TODO : buffer overflow fix
 	void convertString(char* o_buffer, LPWSTR i_string, int length = -1)
 	{
 		int i = 0 ;
 		while(i_string[i] != L'\0')
 		{
-			o_buffer[i] = i_string[i] ;
-			i++ ;
+			o_buffer[i] = i_string[i];
+			i++;
 
-			if(length !=-1 && i >= length) break ;
+			if(length !=-1 && i >= length)
+				break;
 		}
-		o_buffer[i] = '\0' ;
+		o_buffer[i] = '\0';
 	}
 
 	void WriteEvent(PEVENT_RECORD pEvent) {
@@ -176,7 +177,7 @@ namespace {
 		//    SYSTEMTIME stLocal;
 		//    FILETIME ft;
 
-		// Process the event. The pEvent->UserData member is a pointer to 
+		// Process the event. The pEvent->UserData member is a pointer to
 		// the event specific data, if it exists.
 		status = GetEventInformation(pEvent, pInfo);
 
@@ -242,12 +243,12 @@ namespace {
 		if (EVENT_HEADER_FLAG_32_BIT_HEADER == (pEvent->EventHeader.Flags & EVENT_HEADER_FLAG_32_BIT_HEADER)) {
 			g_PointerSize = 4;
 		}
-		else  {
+		else {
 			g_PointerSize = 8;
 		}
 
-		// Print the event data for all the top-level properties. Metadata for all the 
-		// top-level properties come before structure member properties in the 
+		// Print the event data for all the top-level properties. Metadata for all the
+		// top-level properties come before structure member properties in the
 		// property information array. If the EVENT_HEADER_FLAG_STRING_ONLY flag is set,
 		// the event data is a null-terminated string, so just print it.
 
@@ -312,10 +313,10 @@ cleanup:
 					StringLength = wcslen((LPWSTR)pData);
 				}
 
-				char* buffer = new char[StringLength+1] ; 
-				convertString(buffer,(LPWSTR)pData,StringLength) ;
+				char* buffer = new char[StringLength+1];
+				convertString(buffer,(LPWSTR)pData,StringLength);
 				WriteBytes((uint8_t*)buffer,StringLength+1); // +1 for the \0
-				delete buffer ;
+				delete buffer;
 				break;
 			}
 		case TDH_INTYPE_ANSISTRING:
@@ -346,19 +347,19 @@ cleanup:
 				break;
 			}
 		case TDH_INTYPE_INT8:
-			WriteUInt8(*(PCHAR)pData) ;
+			WriteUInt8(*(PCHAR)pData);
 			break;
 		case TDH_INTYPE_UINT8:
-			WriteUInt8(*(PBYTE)pData) ;
+			WriteUInt8(*(PBYTE)pData);
 			break;
 		case TDH_INTYPE_INT16:
-			WriteUInt16(*(PSHORT)pData) ;
+			WriteUInt16(*(PSHORT)pData);
 			break;
 		case TDH_INTYPE_UINT16:
-			WriteUInt16(*(PUSHORT)pData) ;
+			WriteUInt16(*(PUSHORT)pData);
 			break;
 		case TDH_INTYPE_INT32:
-			WriteUInt32(*(PLONG)pData) ;
+			WriteUInt32(*(PLONG)pData);
 			break;
 		case TDH_INTYPE_UINT32:
 			{
@@ -369,15 +370,15 @@ cleanup:
 					//PrintMapString(pMapInfo, pData);
 				}
 				else {
-					WriteUInt32(*(PULONG)pData) ;
+					WriteUInt32(*(PULONG)pData);
 				}
 				break;
 			}
 		case TDH_INTYPE_INT64:
-			WriteUInt64(*(PLONGLONG)pData) ;
+			WriteUInt64(*(PLONGLONG)pData);
 			break;
 		case TDH_INTYPE_UINT64:
-			WriteUInt64(*(PULONGLONG)pData) ;
+			WriteUInt64(*(PULONGLONG)pData);
 			break;
 		case TDH_INTYPE_FLOAT:
 			wprintf(L"ERROR TDH_INTYPE_FLOAT : %f\n", *(PFLOAT)pData);
@@ -391,7 +392,7 @@ cleanup:
 		case TDH_INTYPE_BINARY:
 			{
 				wprintf(L"TDH_INTYPE_BINARY\n");
-				break ;
+				break;
 
 				/*            if (TDH_OUTTYPE_IPV6 == OutType)
 				{
@@ -432,12 +433,12 @@ cleanup:
 				if (4 == g_PointerSize)
 				{
 					//wprintf(L"0x%x\n", *(PULONG)pData);
-					WriteUInt32(*(PULONG)pData) ;
+					WriteUInt32(*(PULONG)pData);
 				}
 				else
 				{
 					//wprintf(L"0x%x\n", *(PULONGLONG)pData);
-					WriteUInt64(*(PULONGLONG)pData) ;
+					WriteUInt64(*(PULONGLONG)pData);
 				}
 
 				break;
@@ -484,10 +485,10 @@ cleanup:
 			WriteUInt64(*(PULONGLONG)pData);
 			break;
 		case TDH_INTYPE_UNICODECHAR:
-			WriteUInt8(*(PWCHAR)pData) ;
+			WriteUInt8(*(PWCHAR)pData);
 			break;
 		case TDH_INTYPE_ANSICHAR:
-			WriteUInt8(*(PCHAR)pData) ;
+			WriteUInt8(*(PCHAR)pData);
 			break;
 		case TDH_INTYPE_WBEMSID:
 			{
@@ -502,9 +503,9 @@ cleanup:
 
 				if ((PULONG)pData > 0)
 				{
-					// A WBEM SID is actually a TOKEN_USER structure followed 
-					// by the SID. The size of the TOKEN_USER structure differs 
-					// depending on whether the events were generated on a 32-bit 
+					// A WBEM SID is actually a TOKEN_USER structure followed
+					// by the SID. The size of the TOKEN_USER structure differs
+					// depending on whether the events were generated on a 32-bit
 					// or 64-bit architecture. Also the structure is aligned
 					// on an 8-byte boundary, so its size is 8 bytes on a
 					// 32-bit computer and 16 bytes on a 64-bit computer.
@@ -529,24 +530,25 @@ cleanup:
 					else
 					{
 						//wprintf(L"%s\\%s\n", DomainName, UserName);
-						char* buffer = new char[MAX_NAME*2] ; 
+						char* buffer = new char[MAX_NAME*2];
 
-						int i = 0,j=0 ;
-						while(DomainName[i] != L'\0')
+						int i = 0, j = 0;
+						while (DomainName[i] != L'\0')
 						{
 							buffer[i] = DomainName[i] ;
-							i++ ;
-						}				
-						buffer[i] = '\\' ; i++ ;
-						while(UserName[j] != L'\0')
+							i++;
+						}
+						buffer[i] = '\\';
+						i++;
+						while (UserName[j] != L'\0')
 						{
-							buffer[i+j] = UserName[j] ;
+							buffer[i + j] = UserName[j];
 							j++ ;
 						}
-						buffer[i+j] = '\0' ;
+						buffer[i+j] = '\0';
 
-						WriteBytes((uint8_t*)buffer,i+j+1);
-						delete buffer ;
+						WriteBytes((uint8_t*)buffer, i + j + 1);
+						delete buffer;
 					}
 				}
 				break;
@@ -584,7 +586,7 @@ cleanup:
 			{
 				wprintf(L"\n");
 
-				LastMember = pInfo->EventPropertyInfoArray[i].structType.StructStartIndex + 
+				LastMember = pInfo->EventPropertyInfoArray[i].structType.StructStartIndex +
 					pInfo->EventPropertyInfoArray[i].structType.NumOfStructMembers;
 
 				for (USHORT j = pInfo->EventPropertyInfoArray[i].structType.StructStartIndex; j < LastMember; j++)
@@ -601,9 +603,9 @@ cleanup:
 			{
 				ZeroMemory(&DataDescriptors, sizeof(DataDescriptors));
 
-				// To retrieve a member of a structure, you need to specify an array of descriptors. 
-				// The first descriptor in the array identifies the name of the structure and the second 
-				// descriptor defines the member of the structure whose data you want to retrieve. 
+				// To retrieve a member of a structure, you need to specify an array of descriptors.
+				// The first descriptor in the array identifies the name of the structure and the second
+				// descriptor defines the member of the structure whose data you want to retrieve.
 
 				if (pStructureName)
 				{
@@ -654,7 +656,7 @@ cleanup:
 
 					// Get the name/value mapping if the property specifies a value map.
 
-					status = GetMapInfo(pEvent, 
+					status = GetMapInfo(pEvent,
 						(PWCHAR)((PBYTE)(pInfo) + pInfo->EventPropertyInfoArray[i].nonStructType.MapNameOffset),
 						pInfo->DecodingSource,
 						pMapInfo);
@@ -665,12 +667,12 @@ cleanup:
 						goto cleanup;
 					}
 
-					status = FormatAndPrintData(pEvent, 
+					status = FormatAndPrintData(pEvent,
 						pInfo->EventPropertyInfoArray[i].nonStructType.InType,
 						pInfo->EventPropertyInfoArray[i].nonStructType.OutType,
-						pData, 
+						pData,
 						PropertySize,
-						pMapInfo 
+						pMapInfo
 						);
 
 					if (ERROR_SUCCESS != status)
@@ -755,8 +757,8 @@ cleanup:
 				{
 					if ((*(PULONG)pData & (BitPosition = (1 << i))) == BitPosition)
 					{
-						wprintf(L"%s%s", 
-							(MatchFound) ? L" | " : L"", 
+						wprintf(L"%s%s",
+							(MatchFound) ? L" | " : L"",
 							(LPWSTR)((PBYTE)pMapInfo + pMapInfo->MapEntryArray[i].OutputOffset));
 
 						MatchFound = TRUE;
@@ -770,8 +772,8 @@ cleanup:
 				{
 					if ((pMapInfo->MapEntryArray[i].Value & *(PULONG)pData) == pMapInfo->MapEntryArray[i].Value)
 					{
-						wprintf(L"%s%s", 
-							(MatchFound) ? L" | " : L"", 
+						wprintf(L"%s%s",
+							(MatchFound) ? L" | " : L"",
 							(LPWSTR)((PBYTE)pMapInfo + pMapInfo->MapEntryArray[i].OutputOffset));
 
 						MatchFound = TRUE;
@@ -791,9 +793,9 @@ cleanup:
 	}
 
 
-	// Get the size of the array. For MOF-based events, the size is specified in the declaration or using 
+	// Get the size of the array. For MOF-based events, the size is specified in the declaration or using
 	// the MAX qualifier. For manifest-based events, the property can specify the size of the array
-	// using the count attribute. The count attribue can specify the size directly or specify the name 
+	// using the count attribute. The count attribute can specify the size directly or specify the name
 	// of another property in the event data that contains the size.
 
 	DWORD GetArraySize(PEVENT_RECORD pEvent, PTRACE_EVENT_INFO pInfo, USHORT i, PUSHORT ArraySize)
@@ -859,7 +861,7 @@ cleanup:
 		}
 		else
 		{
-			if  (ERROR_NOT_FOUND == status)
+			if (ERROR_NOT_FOUND == status)
 			{
 				status = ERROR_SUCCESS; // This case is okay.
 			}
@@ -963,7 +965,7 @@ cleanup:
 	}
 
 	/*
-	This Fonction is excute for each event by the Windows API
+	This Function is execute for each event by the Windows API
 	*/
 	void WINAPI ProcessEvent(PEVENT_RECORD pEvent) {
 		if (stream == NULL)
@@ -977,10 +979,10 @@ cleanup:
 		Event* pevent = new Event(pEvent);
 
 		// If error the metadata can't be read
-		if(pevent->error()) 
+		if(pevent->error())
 			return ;
 
-		int index = -1 ;
+		int index = -1;
 		if(eventslist->add(pevent))
 		{
 			index = eventslist->getIndex(pevent);
@@ -989,7 +991,7 @@ cleanup:
 		{
 			index = eventslist->getIndex(pevent);
 			delete pevent;
-		}  
+		}
 
 		char buffer[64*1024];
 		DWORD buffer_size = sizeof(buffer);
@@ -1039,10 +1041,11 @@ cleanup:
 		// Output cpuid
 		WriteUInt8(pEvent->BufferContext.ProcessorNumber);
 
-		if(index==-1) return ;
+		if (index==-1)
+			return;
 
 		// Decode the packet payload.
-		WriteEvent(pEvent) ;
+		WriteEvent(pEvent);
 	}
 
 }  // namespace
@@ -1051,7 +1054,7 @@ int wmain(int argc, wchar_t** argv) {
 
 	std::vector<TRACEHANDLE> handles;
 
-	eventslist = new EventsList() ;
+	eventslist = new EventsList();
 
 	CreateDirectory(L"ctf", NULL);
 
@@ -1077,7 +1080,7 @@ int wmain(int argc, wchar_t** argv) {
 		fprintf(stderr, "ProcessTrace failed with %u\n", status);
 
 	for (std::vector<TRACEHANDLE>::iterator it = handles.begin(); it != handles.end(); ++it) {
-			CloseTrace(*it);
+		CloseTrace(*it);
 	}
 
 	if (stream != NULL)
@@ -1095,7 +1098,7 @@ int wmain(int argc, wchar_t** argv) {
 	// Close metadata
 	fclose(metadata);
 
-	delete eventslist ;
+	delete eventslist;
 
 	return 0;
 }
