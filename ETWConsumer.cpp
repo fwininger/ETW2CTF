@@ -70,7 +70,7 @@ std::string GuidToString(const GUID& guid) {
   return std::string(buffer);
 }
 
-std::string convertString(wchar_t* pstr) {
+std::string convertString(const wchar_t* pstr) {
   std::wstring wstr(pstr);
   return std::string(wstr.begin(), wstr.end());
 }
@@ -261,7 +261,7 @@ bool ETWConsumer::ProcessEvent(Metadata::Packet& packet, PEVENT_RECORDW pEvent) 
   }
 
   // Update the event_id, now we have the full layout information.
-  event_id = metadata_.getEventID(descr);
+  event_id = metadata_.GetIdForEvent(descr);
   packet.UpdateUInt32(event_id_position, event_id);
 
   // This flag must be turned true only when the packet is emitted.
@@ -304,7 +304,7 @@ bool ETWConsumer::DecodePayload(
 
     // Create the metadata fields.
     Metadata::Field field_data(Metadata::Field::STRING, "data");
-    descr.AddField(field_data); 
+    descr.AddField(field_data);
     return true;
   }
 
@@ -395,7 +395,7 @@ bool ETWConsumer::DecodePayloadField(Metadata::Packet& packet,
   data_descriptors[0].PropertyName = (ULONGLONG)((PBYTE)(pinfo) + field.NameOffset);
   data_descriptors[0].ArrayIndex = 0;
   descriptor_count = 1;
- 
+
   // Determine the property size.
   ULONG property_size = 0;
   ULONG status = TdhGetPropertySize(pevent, 0, NULL, descriptor_count,
@@ -500,7 +500,7 @@ bool ETWConsumer::DecodePayloadField(Metadata::Packet& packet,
             field_type = Metadata::Field::UINT32;
           break;
       }
-      
+
       if (property_size == 4) {
         packet.WriteUInt32(*reinterpret_cast<uint32_t*>(raw_data));
         descr.AddField(Metadata::Field(field_type, field_name));
@@ -561,44 +561,8 @@ bool ETWConsumer::DecodePayloadField(Metadata::Packet& packet,
         return true;
       }
       break;
-    
-    case TDH_INTYPE_WBEMSID:
-#if 0
-      {
-        const int kMAX_NAME = 256;
-        WCHAR UserName[kMAX_NAME];
-        WCHAR DomainName[kMAX_NAME];
-        DWORD cchUserSize = kMAX_NAME;
-        DWORD cchDomainSize = kMAX_NAME;
-        SID_NAME_USE eNameUse;
-
-        std::cout << "SSID?" << std::endl;
-
-        // A WBEM SID is actually a TOKEN_USER structure followed by the SID.
-        // The size of the TOKEN_USER structure differs depending on whether
-        // the events were generated on a 32-bit or 64-bit architecture. 
-
-        // Add token and pointer re-alignment (same than adding twice pointer size).
-        PBYTE psid = raw_data + pointer_size * 2;
-
-        if (!LookupAccountSid(NULL, (PSID)psid, UserName, &cchUserSize,
-            DomainName, &cchDomainSize, &eNameUse)) {
-          return false;
-        }
-           
-        std::stringstream ss;
-        ss << convertString(DomainName) << "\\" << convertString(UserName);
-
-        packet.WriteString(ss.str());
-        descr.AddField(Metadata::Field(Metadata::Field::STRING, field_name));
-
-        std::cout << "SSID:" << ss.str() << std::endl;
-      }
-      return true;
-#endif
-      break;
   }
- 
+
   return false;
 }
 
@@ -723,7 +687,8 @@ bool ETWConsumer::SerializeMetadata(std::ostream& out) const {
 
   for (size_t i = 0; i < metadata_.size(); ++i) {
     size_t event_id = i + 1;
-    if (!SerializeMetadataEvent(out, metadata_.at(i), event_id))
+    const Metadata::Event& descr = metadata_.GetEventWithId(i);
+    if (!SerializeMetadataEvent(out, descr, event_id))
       return false;
   }
 

@@ -33,24 +33,53 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace etw2ctf {
 
+// This class implements the CTF stream management.
+//
+// A CTF trace is a folder with a single metadata text file and multiple
+// stream files.
+//
+// Example:
+//
+//  CTFProducer encoder;
+//  encoder.OpenFolder(L"ctf");
+//  encoder.OpenStream(L"stream1");
+//  while (...)
+//    WriteToStream(encoder.stream(), ...);
+//  encoder.CloseStream();
+//
 class CTFProducer {
  public:
   // Forward declaration.
   class Packet;
 
-  CTFProducer() {
-  }
-
+  // Open the CTF root folder.
+  // @param folder the root folder of the trace file.
+  // @returns true on success, false otherwise.
   bool OpenFolder(const std::wstring& folder);
-  bool OpenStream(const std::wstring& filename);
+
+  // Open and change the active output stream.
+  // @param name the name of the stream.
+  // @returns true on success, false otherwise.
+  bool OpenStream(const std::wstring& name);
+
+  // Close the active output stream.
+  // @returns true on success, false otherwise.
   bool CloseStream();
 
+  // Write bytes to the active output stream.
+  // @param raw the bytes to write.
+  // @param length the number of bytes to write.
+  // @returns true on success, false otherwise.
   bool Write(const char* raw, size_t length);
 
-  std::ofstream& stream() { return stream_; }
+  // Retrieve the active output stream.
+  std::ofstream& stream();
 
  private:
+  // The CTF root folder.
   std::wstring folder_;
+
+  // The active output stream.
   std::ofstream stream_;
 };
 

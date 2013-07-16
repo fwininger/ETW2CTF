@@ -24,6 +24,13 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
+//
+// The metadata holds the events layout used to encode CTF streams. Each event
+// layout must be assigned to a unique event id.
+//
+// The metadata keeps a collection of 'Event', and each 'Event' keeps a
+// collection of 'Field'. A 'Field' has a name and a type.
+//
 #ifndef CTF2ETW_METADATA_H
 #define CTF2ETW_METADATA_H
 
@@ -34,27 +41,36 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace etw2ctf {
 
+// This class implements a dictionary of event layouts. Each event encoded in
+// a CTF stream has a unique event id which correspond to the layout
+// description in this dictionary.
 class Metadata {
  public:
-   // Forward declaration.
-   class Event;
-   class Field;
-   class Packet;
+  // Forward declaration.
+  class Event;
+  class Field;
+  class Packet;
 
- public :
   // Get a unique event id for this event.
-  // If the event already exists, the function return the previous ID,
-  // otherwise it returns a newly created ID.
-  size_t getEventID(const Event& evt);
+  // If the event already exists, the function return the previous id,
+  // otherwise it returns a newly created event id.
+  size_t GetIdForEvent(const Event& evt);
 
+  // Get the number of event in our dictionary.
+  // returns the number of events.
   size_t size() const { return events_.size(); }
-  const Event& at(size_t offset) const { return events_[offset]; }
+
+  // Get an event with a specific id.
+  // returns the requested event.
+  const Event& GetEventWithId(size_t offset) const { return events_.at(offset); }
 
  private:
-  // Event definitions.
+  // Dictionary of event definitions.
+  // The event id is the offset in this vector.
   std::vector<Event> events_;
 };
 
+// This class contains the information layout for an event.
 class Metadata::Event {
  public:
   // Constructor
@@ -66,6 +82,11 @@ class Metadata::Event {
   const std::string& name() const { return name_; }
   void set_name(const std::string& name) { name_ = name; }
 
+  // Set the event descriptor information.
+  // @guid the guid of this event.
+  // @opcode the opcode of this event.
+  // @version the version of this event.
+  // @event_id the id of this event.
   void set_info(GUID guid, unsigned char opcode, unsigned char version,
       unsigned short event_id) {
     guid_ = guid;
@@ -77,25 +98,34 @@ class Metadata::Event {
   size_t size() const { return fields_.size(); }
   const Field& at(size_t offset) const { return fields_[offset]; }
 
+  // Compare the event and fields.
+  // @param evt the event to compare with.
+  // returns true when the event descriptor and layout are the same.
   bool operator==(const Event& evt) const;
 
+  // Remove all fields.
   void Reset() { fields_.clear(); }
-  void AddField(const Field& field) { fields_.push_back(field); }
 
-private:
-  // Event identification
+  // Add a field to the layout.
+  // @param field the field to add.
+  void AddField(const Field& field);
+
+ private:
+  // Event identification.
   std::string name_;
+
+  // Event descriptor.
   GUID guid_;
   unsigned char opcode_;
   unsigned char version_;
   unsigned short event_id_;
 
-  // List of Field.
+  // Fields of this event.
   std::vector<Metadata::Field> fields_;
 };
 
 class Metadata::Field {
-public:
+ public:
   // Type of Field supported.
   enum FIELDTYPE {
     INVALID,
@@ -135,18 +165,22 @@ public:
     return !(*this == field);
   }
 
-private:
+ private:
   // Field Type.
   FIELDTYPE type_;
 
   // Field Name.
   std::string name_;
   size_t size_;
+
+  // In case of a variable length array, the field_size contains the name of
+  // the field with the dynamic size.
   std::string field_size_;
 };
 
+// This class holds a binary encoded event describe by an event.
 class Metadata::Packet {
-public:
+ public:
   Packet() {
   }
 

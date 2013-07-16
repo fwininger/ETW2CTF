@@ -41,9 +41,10 @@ bool Metadata::Event::operator==(const Event& evt) const {
 
   if (fields_.size() != evt.fields_.size())
     return false;
-  for (size_t i = 0; i < fields_.size(); ++i)
+  for (size_t i = 0; i < fields_.size(); ++i) {
     if (fields_[i] != evt.fields_[i])
       return false;
+  }
 
   return true;
 }
@@ -52,13 +53,20 @@ bool Metadata::Field::operator==(const Field& field) const {
   return name_.compare(field.name_) == 0 && type_ == field.type_;
 }
 
-size_t Metadata::getEventID(const Event& evt) {
+size_t Metadata::GetIdForEvent(const Event& evt) {
   for (size_t i = 0; i < events_.size(); ++i) {
     if (evt == events_[i])
       return i + 1;
   }
   events_.push_back(evt);
   return events_.size();
+}
+
+void Metadata::Event::AddField(const Field& field) {
+  for (size_t i = 0; i < fields_.size(); ++i) {
+    assert(fields_[i].name().compare(field.name()) != 0);
+  }
+  fields_.push_back(field);
 }
 
 size_t Metadata::Packet::size() const {

@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <vector>
- 
+
 // Some missing definition and typedef from the windows API.
 typedef unsigned long ULONG;
 #define FALSE 0

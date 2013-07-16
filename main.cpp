@@ -24,7 +24,27 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
-
+//
+// ETW2CTF translates a trace file from ETW (Event Tracing for Windows) trace
+// file to the CTF (Common Trace Format).
+//
+// ETW (Event Tracing for windows) provide the ability to trace windows kernel
+// and user-space application for debugging or profiling. ETL files are binary
+// encoded file format, but ETW provides an API to retrieve the events format.
+//
+// See: http://msdn.microsoft.com/en-us/library/windows/desktop/bb968803(v=vs.85).aspx
+//
+// The performance SDK (an optional include from the Microsoft SDK) provides
+// performance analysis tools to gather ETW traces. The SDK also install some
+// manifest to describe performance events.
+//
+// See: http://msdn.microsoft.com/en-us/performance/cc825801.aspx
+//
+// Common Trace Format is a self-describing file format used for tracing tools
+// interoperability.
+//
+// See: http://www.efficios.com/ctf
+//
 #include "CTFProducer.h"
 #include "ETWConsumer.h"
 #include "Metadata.h"
@@ -85,7 +105,7 @@ int wmain(int argc, wchar_t** argv) {
   // No trace files to consume.
   if (consumer.Empty())
     return 0;
-  
+
   consumer.SetEventCallback(ProcessEvent);
   consumer.SetBufferCallback(ProcessBuffer);
 

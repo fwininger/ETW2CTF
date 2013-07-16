@@ -81,4 +81,9 @@ bool CTFProducer::Write(const char* raw, size_t length) {
   return true;
 }
 
+std::ofstream& CTFProducer::stream() {
+  assert(stream_.good());
+  return stream_;
+}
+
 }  //namespace etw2ctf
