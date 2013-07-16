@@ -1,38 +1,36 @@
-/******************************************************************************
-Copyright (c) 2013, Florian Wininger, Etienne Bergeron
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the <organization> nor the
-      names of its contributors may be used to endorse or promote products
-      derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-******************************************************************************/
+// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//   * Redistributions of source code must retain the above copyright
+//     notice, this list of conditions and the following disclaimer.
+//   * Redistributions in binary form must reproduce the above copyright
+//     notice, this list of conditions and the following disclaimer in the
+//     documentation and/or other materials provided with the distribution.
+//   * Neither the name of the <organization> nor the
+//     names of its contributors may be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+// THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // The metadata holds the events layout used to encode CTF streams. Each event
 // layout must be assigned to a unique event id.
 //
 // The metadata keeps a collection of 'Event', and each 'Event' keeps a
 // collection of 'Field'. A 'Field' has a name and a type.
-//
-#ifndef CTF2ETW_METADATA_H
-#define CTF2ETW_METADATA_H
+
+#ifndef CTF2ETW_METADATA_H_
+#define CTF2ETW_METADATA_H_
 
 #include <initguid.h>
 
@@ -73,7 +71,7 @@ class Metadata {
 // This class contains the information layout for an event.
 class Metadata::Event {
  public:
-  // Constructor
+  // Constructor.
   Event() :
     opcode_(0), version_(0), event_id_(0) {
   }
@@ -88,7 +86,7 @@ class Metadata::Event {
   // @version the version of this event.
   // @event_id the id of this event.
   void set_info(GUID guid, unsigned char opcode, unsigned char version,
-      unsigned short event_id) {
+                unsigned short event_id) {
     guid_ = guid;
     opcode_ = opcode;
     version_ = version;
@@ -101,7 +99,7 @@ class Metadata::Event {
   // Compare the event and fields.
   // @param evt the event to compare with.
   // returns true when the event descriptor and layout are the same.
-  bool operator==(const Event& evt) const;
+  bool operator==(const Event& event) const;
 
   // Remove all fields.
   void Reset() { fields_.clear(); }
@@ -129,28 +127,39 @@ class Metadata::Field {
   // Type of Field supported.
   enum FIELDTYPE {
     INVALID,
-    STRUCT_BEGIN, STRUCT_END,
-    BINARY_FIXED, BINARY_VAR,
-    BIT, BIT5, BIT7, BIT13,
-    INT8, INT16, INT32, INT64,
-    UINT8, UINT16, UINT32, UINT64,
-    XINT8, XINT16, XINT32, XINT64,
-    STRING, GUID
+    STRUCT_BEGIN,
+    STRUCT_END,
+    BINARY_FIXED,
+    BINARY_VAR,
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
+    XINT8,
+    XINT16,
+    XINT32,
+    XINT64,
+    STRING,
+    GUID
   };
 
   Field() : type_(INVALID), size_(0) {
   }
 
   Field(FIELDTYPE type, const std::string& name)
-    : type_(type), name_(name), size_(0) {
+      : type_(type), name_(name), size_(0) {
   }
 
   Field(FIELDTYPE type, const std::string& name, size_t size)
-    : type_(type), name_(name), size_(size) {
+      : type_(type), name_(name), size_(size) {
   }
 
   Field(FIELDTYPE type, const std::string& name, const std::string& field_size)
-    : type_(type), name_(name), size_(0), field_size_(field_size) {
+      : type_(type), name_(name), size_(0), field_size_(field_size) {
   }
 
   // Accessors.
@@ -181,22 +190,18 @@ class Metadata::Field {
 // This class holds a binary encoded event describe by an event.
 class Metadata::Packet {
  public:
-  Packet() {
-  }
-
   size_t size() const;
   const char* raw_bytes() const;
   void Reset(size_t size);
 
   void UpdateUInt32(size_t position, uint32_t value);
 
-  void WriteUInt8(uint8_t value);
-  void WriteUInt16(uint16_t value);
-  void WriteUInt32(uint32_t value);
-  void WriteUInt64(uint64_t value);
-  void WriteBytes(const uint8_t* value, size_t len);
-
-  void WriteString(const std::string& str);
+  void EncodeUInt8(uint8_t value);
+  void EncodeUInt16(uint16_t value);
+  void EncodeUInt32(uint32_t value);
+  void EncodeUInt64(uint64_t value);
+  void EncodeBytes(const uint8_t* value, size_t len);
+  void EncodeString(const std::string& str);
 
  private:
   std::vector<uint8_t> buffer_;
@@ -204,4 +209,4 @@ class Metadata::Packet {
 
 }  // namespace etw2ctf
 
-#endif
+#endif  // CTF2ETW_METADATA_H_
