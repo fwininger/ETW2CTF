@@ -24,39 +24,36 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
+#ifndef ETW2CTF_CTFPRODUCER_H
+#define ETW2CTF_CTFPRODUCER_H
 
-#ifndef EVENTSLIST_H
-#define EVENTSLIST_H
+#include <cstdint>
+#include <fstream>
+#include <vector>
 
-#include <Windows.h>
-#include "Event.h"
+namespace etw2ctf {
 
-class EventsList
-{
+class CTFProducer {
+ public:
+  // Forward declaration.
+  class Packet;
 
-	// List of eventfield
-	std::vector<Event*> events;
+  CTFProducer() {
+  }
 
-public :
-	// Constructor
-	EventsList::EventsList();
+  bool OpenFolder(const std::wstring& folder);
+  bool OpenStream(const std::wstring& filename);
+  bool CloseStream();
 
-	EventsList::~EventsList();
+  bool Write(const char* raw, size_t length);
 
-	// add the event if it don't exist
-	// return true if the event is added
-	// else false
-	bool add(Event* pevent);
+  std::ofstream& stream() { return stream_; }
 
-	// Is the event already in the vector
-	bool isExist(Event* pevent);
-
-	// Get the index of a event in the list
-	int getIndex(Event* pevent);
-
-	// Print the metadata file
-	void printMetadata(FILE* metadata,EVENT_TRACE_LOGFILE trace);
-
+ private:
+  std::wstring folder_;
+  std::ofstream stream_;
 };
 
-#endif
+}  // namespace etw2ctf
+
+#endif  // ETW2CTF_CTFPRODUCER_H

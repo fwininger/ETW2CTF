@@ -25,88 +25,60 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ******************************************************************************/
 
-#ifndef EVENT_H
-#define EVENT_H
-
-#include <windows.h>
-#include <stdlib.h>
+#include <cassert>
+#include <sstream>
 #include <string>
-#include <vector>
-#include <tdh.h>
 
-class Eventfield
-{
+#include "CTFProducer.h"
 
-public :
-	// Fieldtype
-	enum FIELDTYPE {
-		BIT, BIT5, BIT7, BIT13,
-		INT8, INT16, INT32, INT64,
-		UINT8, UINT16, UINT32, UINT64,
-		XINT8, XINT16, XINT32, XINT64,
-		STRING, GUID
-	};
+// Some missing definition and typedef from the windows API.
+typedef unsigned int BOOL;
+#define FALSE 0
+#define TRUE 1
+#define WINAPI __stdcall
+typedef const wchar_t* LPCWSTR;
+typedef struct _SECURITY_ATTRIBUTES *LPSECURITY_ATTRIBUTES;
 
-public :
-	// Type of the eventfield
-	FIELDTYPE type;
+// Import functions from windows API.
+extern "C" BOOL WINAPI CreateDirectoryW(
+    LPCWSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
-	// Field Name
-	std::string name;
+namespace etw2ctf {
 
-public :
-	// equals
-	bool equals(Eventfield* i_eventfield);
+bool CTFProducer::OpenFolder(const std::wstring& folder) {
+  if (!folder_.empty() || folder.empty())
+    return false;
+  folder_ = folder;
+  if (CreateDirectoryW(folder_.c_str(), NULL) == FALSE)
+    return false;
+  return TRUE;
+}
 
-};
+bool CTFProducer::OpenStream(const std::wstring& filename) {
+  assert(!stream_.is_open());
 
-class Event
-{
-	GUID guid;
-	UCHAR opcode;
-	UCHAR version;
-	UCHAR eventid;
+  std::wstringstream ss;
+  ss << folder_ << L"\\" << filename;
 
-	// List of eventfield
-	std::vector<Eventfield*> fields;
+  stream_.open(ss.str(),
+      std::ofstream::out | std::ofstream::trunc | std::ofstream::binary);
+  return stream_.good();
+}
 
-	// Name of the event
-	std::string name;
+bool CTFProducer::CloseStream() {
+  if (!stream_.is_open())
+    return false;
+  stream_.close();
+  return !stream_.fail();
+}
 
-	// error status, true if the event has error
-	bool init;
+bool CTFProducer::Write(const char* raw, size_t length) {
+  if (!stream_.is_open())
+    return false;
+  assert(stream_.good());
+  stream_.write(raw, length);
 
-public:
-	// Constructor
-	Event::Event(PEVENT_RECORD);
+  return true;
+}
 
-	Event::~Event();
-
-	// Test the guid, opcode, version, eventid
-	bool sameID(Event*);
-
-	// Complete equality
-	bool equals(Event*);
-
-	// Print Metadata
-	void PrintMetadata(FILE* metadata, int id);
-
-	// return true if the event has an error
-	bool error() { return init; }
-
-private:
-
-	// initialize the event
-	void load(PEVENT_RECORD);
-
-	DWORD loadEventField(TRACE_EVENT_INFO* pinfo, DWORD i, USHORT indent);
-
-	void renameField();
-
-	// returns -1 if not found
-	// otherwise returns the position in the vector
-	size_t existField(Eventfield*);
-
-};
-
-#endif // EVENT_H
+}  //namespace etw2ctf
