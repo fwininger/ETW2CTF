@@ -44,9 +44,9 @@
 
 namespace etw2ctf {
 
-// The ETW consumer uses the windows API to consume ETW event. By using the
-// Trace Data Helper (THD), the converter decodes the payload and the event
-// layout. The decoded payload is serialized into a CTF packet.
+// The ETW consumer uses the windows API to consume ETW events. By using the
+// Trace Data Helper (THD), the converter decodes payloads and events layout.
+// Decoded payloads are serialized into CTF packets.
 class ETWConsumer {
  public:
   typedef void (WINAPI *ProcessEventCallback)(PEVENT_RECORD pEvent);
@@ -85,15 +85,15 @@ class ETWConsumer {
   // @returns true on success, false otherwise.
   bool GetBufferName(PEVENT_TRACE_LOGFILE ptrace, std::wstring* name) const;
 
-  // Callback called for each.
+  // Callback called at each stream opening.
   // @param ptrace the ETW buffer information.
   // @returns true on success, false otherwise.
   void ProcessHeader(Metadata::Packet& packet);
 
-  // Callback called for each ETW event. The ETW event is serialize into a 
+  // Callback called for each ETW event. The ETW event is serialized into a
   // CTF packet.
-  // @param packet on success, contains the serialized CTF event.
   // @param pevent the ETW event to convert.
+  // @param packet on success, contains the serialized CTF event.
   // @returns true on success, false otherwise.
   bool ProcessEvent(PEVENT_RECORD pevent, Metadata::Packet& packet);
 

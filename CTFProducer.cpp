@@ -68,4 +68,4 @@ bool CTFProducer::Write(const char* raw, size_t length) {
   return true;
 }
 
-}  //namespace etw2ctf
+}  // namespace etw2ctf
