@@ -183,6 +183,8 @@ class Metadata::Field {
 
   // Field Name.
   std::string name_;
+
+  // The number of elements in aggregate types.
   size_t size_;
 
   // In case of a variable length array, the field_size contains the name of

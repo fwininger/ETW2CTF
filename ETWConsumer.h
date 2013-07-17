@@ -88,7 +88,6 @@ class ETWConsumer {
 
   // Callback called at each stream opening, and append CTF stream header.
   // @param packet the packet to encode the stream header.
-  // @returns true on success, false otherwise.
   void ProcessHeader(Metadata::Packet& packet);
 
   // Callback called for each ETW event. The ETW event is serialized into a
