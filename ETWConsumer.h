@@ -52,11 +52,12 @@ class ETWConsumer {
   typedef void (WINAPI *ProcessEventCallback)(PEVENT_RECORD pEvent);
   typedef ULONG (WINAPI *ProcessBufferCallback)(PEVENT_TRACE_LOGFILE pTrace);
 
-  // Returns true when there is not traces to consume.
+  // Check whether the list of registered trace is empty.
+  // @returns true when there is not traces to consume, false otherwise.
   bool Empty() const { return traces_.empty(); }
 
   // Add a trace file for consuming.
-  //@param filename the trace file
+  // @param filename the trace file.
   void AddTraceFile(std::wstring filename) {
     traces_.push_back(filename);
   }
@@ -76,7 +77,7 @@ class ETWConsumer {
   }
 
   // Consume all registered trace files.
-  // return false if an error occurred.
+  // @returns true on success, false if an error occurred.
   bool ConsumeAllEvents();
 
   // For a given ETW buffer, produce a unique CTF stream name.
@@ -85,8 +86,8 @@ class ETWConsumer {
   // @returns true on success, false otherwise.
   bool GetBufferName(PEVENT_TRACE_LOGFILE ptrace, std::wstring* name) const;
 
-  // Callback called at each stream opening.
-  // @param ptrace the ETW buffer information.
+  // Callback called at each stream opening, and append CTF stream header.
+  // @param packet the packet to encode the stream header.
   // @returns true on success, false otherwise.
   void ProcessHeader(Metadata::Packet& packet);
 
@@ -103,7 +104,7 @@ class ETWConsumer {
   bool ProcessBuffer(PEVENT_TRACE_LOGFILE ptrace);
 
   // Serialize the metadata to the CTF text representation.
-  // @param results receives the metadata text representation.
+  // @param results on success, receives the metadata text representation.
   // @returns true on success, false otherwise.
   bool SerializeMetadata(std::string* results) const;
 
@@ -131,7 +132,7 @@ class ETWConsumer {
   // The dictionary of event layouts.
   Metadata metadata_;
 
-  // Temporary buffer used to hold different data produced by the ETW API.
+  // Temporary buffer used to hold raw data produced by the ETW API.
   std::vector<char> data_property_buffer_;
   std::vector<char> formatted_property_buffer_;
   std::vector<char> map_info_buffer_;

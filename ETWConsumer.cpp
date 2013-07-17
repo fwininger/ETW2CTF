@@ -302,7 +302,7 @@ bool ETWConsumer::DecodePayload(
   // Filter the decoding source we don't know how to handle.
   if (pinfo->DecodingSource != DecodingSourceWbem &&
       pinfo->DecodingSource != DecodingSourceXMLFile) {
-      return false;
+    return false;
   }
 
   // Retrieve event descriptor information.
