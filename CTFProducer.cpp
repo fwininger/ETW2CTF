@@ -32,10 +32,11 @@
 namespace etw2ctf {
 
 bool CTFProducer::OpenFolder(const std::wstring& folder) {
+  // TODO(bergeret): Do we need to clear the folder, or report a failure?
   if (!folder_.empty() || folder.empty())
     return false;
   folder_ = folder;
-  if (CreateDirectoryW(folder_.c_str(), NULL) == FALSE)
+  if (CreateDirectory(folder_.c_str(), NULL) == FALSE)
     return false;
   return TRUE;
 }
@@ -65,11 +66,6 @@ bool CTFProducer::Write(const char* raw, size_t length) {
   stream_.write(raw, length);
 
   return true;
-}
-
-std::ofstream& CTFProducer::stream() {
-  assert(stream_.good());
-  return stream_;
 }
 
 }  //namespace etw2ctf

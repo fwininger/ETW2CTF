@@ -99,7 +99,7 @@ class ETWConsumer {
   // @param packet on success, contains the serialized CTF event.
   // @param pevent the ETW event to convert.
   // @returns true on success, false otherwise.
-  bool ProcessEvent(Metadata::Packet& packet, PEVENT_RECORD pevent);
+  bool ProcessEvent(PEVENT_RECORD pevent, Metadata::Packet& packet);
 
   // Callback called at the beginning of each ETW buffer.
   // @param ptrace the ETW buffer information.
@@ -107,21 +107,22 @@ class ETWConsumer {
   bool ProcessBuffer(PEVENT_TRACE_LOGFILE ptrace);
 
   // Serialize the metadata to the CTF text representation.
+  // @param results receives the metadata text representation.
   // @returns true on success, false otherwise.
-  bool SerializeMetadata(std::ostream& stream) const;
+  bool SerializeMetadata(std::string* results) const;
 
  private:
   bool DecodePayload(
-      Metadata::Packet& packet, Metadata::Event& descr, PEVENT_RECORD pEvent);
+      PEVENT_RECORD pevent, Metadata::Packet& packet, Metadata::Event& descr);
   bool SendRawPayload(
-      Metadata::Packet& packet, Metadata::Event& descr, PEVENT_RECORD pEvent);
+      PEVENT_RECORD pevent, Metadata::Packet& packet, Metadata::Event& descr);
 
-  bool DecodePayloadField(Metadata::Packet& packet, Metadata::Event& descr,
-      PEVENT_RECORD pEvent, PTRACE_EVENT_INFO pinfo, unsigned int field);
+  bool DecodePayloadField(PEVENT_RECORD pevent, PTRACE_EVENT_INFO pinfo,
+      unsigned int field, Metadata::Packet& packet, Metadata::Event& descr);
 
-  bool SerializeMetadataEvent(std::ostream& out,
+  bool SerializeMetadataEvent(std::stringstream& out,
                               const Metadata::Event& descr, size_t id) const;
-  bool SerializeMetadataField(std::ostream& out,
+  bool SerializeMetadataField(std::stringstream& out,
                               const Metadata::Field& field) const;
 
   // Trace files to consume.

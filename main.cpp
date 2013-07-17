@@ -57,23 +57,23 @@ using etw2ctf::Metadata;
 etw2ctf::ETWConsumer consumer;
 etw2ctf::CTFProducer producer;
 
-void WINAPI ProcessEvent(PEVENT_RECORD pEvent) {
+void WINAPI ProcessEvent(PEVENT_RECORD pevent) {
   Metadata::Packet packet;
 
-  if (!consumer.ProcessEvent(packet, pEvent))
+  if (!consumer.ProcessEvent(pevent, packet))
     return;
 
   // Write the packet into the stream.
   producer.Write(packet.raw_bytes(), packet.size());
 }
 
-ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW pTrace) {
+ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
   // Close the previous stream.
   producer.CloseStream();
 
   // Open the next buffer.
   std::wstring stream_name;
-  if (!consumer.GetBufferName(pTrace, &stream_name))
+  if (!consumer.GetBufferName(ptrace, &stream_name))
     return FALSE;
   producer.OpenStream(stream_name);
 
@@ -82,7 +82,7 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW pTrace) {
   consumer.ProcessHeader(packet);
   producer.Write(packet.raw_bytes(), packet.size());
 
-  if (!consumer.ProcessBuffer(pTrace))
+  if (!consumer.ProcessBuffer(ptrace))
     return FALSE;
 
   return TRUE;
@@ -124,7 +124,10 @@ int wmain(int argc, wchar_t** argv) {
 
   // Produce the metadata build during events processing.
   producer.OpenStream(L"metadata");
-  if (!consumer.SerializeMetadata(producer.stream()))
+  std::string metadata;
+  if (!consumer.SerializeMetadata(&metadata))
+    return -1;
+  if (!producer.Write(metadata.c_str(), metadata.size()))
     return -1;
   producer.CloseStream();
 

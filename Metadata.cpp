@@ -49,7 +49,10 @@ bool Metadata::Event::operator==(const Event& event) const {
 }
 
 bool Metadata::Field::operator==(const Field& field) const {
-  return name_.compare(field.name_) == 0 && type_ == field.type_;
+  return type_ == field.type_ &&
+      size_ == field.size_ &&
+      name_.compare(field.name_) == 0 &&
+      field_size_.compare(field.field_size_) == 0;
 }
 
 size_t Metadata::GetIdForEvent(const Event& evt) {

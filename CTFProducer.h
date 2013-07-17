@@ -28,6 +28,7 @@
 #ifndef ETW2CTF_CTFPRODUCER_H_
 #define ETW2CTF_CTFPRODUCER_H_
 
+// Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>  // NO LINT
 
@@ -48,7 +49,7 @@ namespace etw2ctf {
 //  encoder.OpenFolder(L"ctf");
 //  encoder.OpenStream(L"stream1");
 //  while (...)
-//    WriteToStream(encoder.stream(), ...);
+//    encoder.Write(buffer, length);
 //  encoder.CloseStream();
 //
 class CTFProducer {
@@ -75,9 +76,6 @@ class CTFProducer {
   // @param length the number of bytes to write.
   // @returns true on success, false otherwise.
   bool Write(const char* raw, size_t length);
-
-  // Retrieve the active output stream.
-  std::ofstream& stream();
 
  private:
   // The CTF root folder.

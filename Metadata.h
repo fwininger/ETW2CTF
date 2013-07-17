@@ -52,15 +52,18 @@ class Metadata {
   // Get a unique event id for this event.
   // If the event already exists, the function return the previous id,
   // otherwise it returns a newly created event id.
-  size_t GetIdForEvent(const Event& evt);
+  // @param the event to find a unique event id.
+  // @returns return a unique event id.
+  size_t GetIdForEvent(const Event& event);
 
   // Get the number of event in our dictionary.
   // returns the number of events.
   size_t size() const { return events_.size(); }
 
   // Get an event with a specific id.
+  // @param event_id the event_id to retrieve.
   // returns the requested event.
-  const Event& GetEventWithId(size_t offset) const { return events_.at(offset); }
+  const Event& GetEventWithId(size_t event_id) const { return events_.at(event_id); }
 
  private:
   // Dictionary of event definitions.
@@ -94,10 +97,10 @@ class Metadata::Event {
   }
 
   size_t size() const { return fields_.size(); }
-  const Field& at(size_t offset) const { return fields_[offset]; }
+  const Field& at(size_t offset) const { return fields_.at(offset); }
 
   // Compare the event and fields.
-  // @param evt the event to compare with.
+  // @param event the event to compare with.
   // returns true when the event descriptor and layout are the same.
   bool operator==(const Event& event) const;
 
@@ -125,7 +128,7 @@ class Metadata::Event {
 class Metadata::Field {
  public:
   // Type of Field supported.
-  enum FIELDTYPE {
+  enum FieldType {
     INVALID,
     STRUCT_BEGIN,
     STRUCT_END,
@@ -150,20 +153,20 @@ class Metadata::Field {
   Field() : type_(INVALID), size_(0) {
   }
 
-  Field(FIELDTYPE type, const std::string& name)
+  Field(FieldType type, const std::string& name)
       : type_(type), name_(name), size_(0) {
   }
 
-  Field(FIELDTYPE type, const std::string& name, size_t size)
+  Field(FieldType type, const std::string& name, size_t size)
       : type_(type), name_(name), size_(size) {
   }
 
-  Field(FIELDTYPE type, const std::string& name, const std::string& field_size)
+  Field(FieldType type, const std::string& name, const std::string& field_size)
       : type_(type), name_(name), size_(0), field_size_(field_size) {
   }
 
   // Accessors.
-  FIELDTYPE type() const { return type_; }
+  FieldType type() const { return type_; }
   const std::string& name() const { return name_; }
   size_t size() const { return size_; }
   const std::string&  field_size() const { return field_size_; }
@@ -176,34 +179,59 @@ class Metadata::Field {
 
  private:
   // Field Type.
-  FIELDTYPE type_;
+  FieldType type_;
 
   // Field Name.
   std::string name_;
   size_t size_;
 
   // In case of a variable length array, the field_size contains the name of
-  // the field with the dynamic size.
+  // the field holding the dynamic size.
   std::string field_size_;
 };
 
 // This class holds a binary encoded event describe by an event.
 class Metadata::Packet {
  public:
-  size_t size() const;
+  // Returns a pointer to the raw bytes encoded in this packet.
   const char* raw_bytes() const;
-  void Reset(size_t size);
 
+  // Returns the current size of the encoded packet.
+  size_t size() const;
+
+  // Remove every byte encoded after the offset.
+  // @param offset the offset of first byte to remove.
+  void Reset(size_t offset);
+
+  // Update an encoded value at a given position.
+  // @param position the position to update.
+  // @param the new value to encode.
   void UpdateUInt32(size_t position, uint32_t value);
 
+  // Encode a 8-bit value.
+  // @param value the value to encode.
   void EncodeUInt8(uint8_t value);
+
+  // Encode a 16-bit value.
+  // @param value the value to encode.
   void EncodeUInt16(uint16_t value);
+
+  // Encode a 32-bit value.
+  // @param value the value to encode.
   void EncodeUInt32(uint32_t value);
+
+  // Encode a 64-bit value.
+  // @param value the value to encode.
   void EncodeUInt64(uint64_t value);
-  void EncodeBytes(const uint8_t* value, size_t len);
+
+  // Encode a sequence of raw bytes.
+  // @param value the value to encode.
+  // @param length the number of bytes to encode.
+  void EncodeBytes(const uint8_t* value, size_t length);
   void EncodeString(const std::string& str);
 
  private:
+  // Internal buffer holding the raw encoded bytes.
   std::vector<uint8_t> buffer_;
 };
 
