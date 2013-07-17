@@ -52,10 +52,6 @@ class ETWConsumer {
   typedef void (WINAPI *ProcessEventCallback)(PEVENT_RECORD pEvent);
   typedef ULONG (WINAPI *ProcessBufferCallback)(PEVENT_TRACE_LOGFILE pTrace);
 
-  // Constructor.
-  ETWConsumer() : stream_context_emitted_(false) {
-  }
-
   // Returns true when there is not traces to consume.
   bool Empty() const { return traces_.empty(); }
 
@@ -134,10 +130,6 @@ class ETWConsumer {
 
   // The dictionary of event layouts.
   Metadata metadata_;
-
-  // A flag that indicate if the stream context information was emitted.
-  // If the value is true, the next packet serialize the stream context.
-  bool stream_context_emitted_;
 
   // Temporary buffer used to hold different data produced by the ETW API.
   std::vector<char> data_property_buffer_;

@@ -65,12 +65,12 @@ std::string convertString(const wchar_t* pstr) {
   return std::string(wstr.begin(), wstr.end());
 }
 
-void WriteLargeInteger(Metadata::Packet& packet, const LARGE_INTEGER& value) {
+void EncodeLargeInteger(Metadata::Packet& packet, const LARGE_INTEGER& value) {
   packet.EncodeUInt32(value.LowPart);
   packet.EncodeUInt32(value.HighPart);
 }
 
-void WriteGUID(Metadata::Packet& packet, const GUID& guid) {
+void EncodeGUID(Metadata::Packet& packet, const GUID& guid) {
   packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 24));
   packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 16));
   packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 8));
@@ -161,13 +161,12 @@ void ETWConsumer::ProcessHeader(Metadata::Packet& packet) {
   packet.EncodeUInt32(kCtfMagicNumber);
 
   // Output trace.header.uuid.
-  WriteGUID(packet, ETWConverterGuid);
+  EncodeGUID(packet, ETWConverterGuid);
 }
 
 // This function is executed before each buffer.
 bool ETWConsumer::ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
   assert(ptrace != NULL);
-  stream_context_emitted_ = false;
   return true;
 }
 
@@ -181,17 +180,8 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
       pevent->EventHeader.EventDescriptor.Opcode == EVENT_TRACE_TYPE_INFO) {
     return false;
   }
-
-  if (!stream_context_emitted_) {
-    // TODO(bergeret): Export stream context information here, and remove it
-    //     from the packet fields. I need to validate the information first.
-    // Output trace.context.timestamp_begin/end.
-    //WriteLargeInteger(packet, pTrace->LogfileHeader.StartTime);
-    //WriteLargeInteger(packet, pTrace->LogfileHeader.EndTime);
-  }
-
   // Output stream.header.timestamp.
-  WriteLargeInteger(packet, pevent->EventHeader.TimeStamp);
+  EncodeLargeInteger(packet, pevent->EventHeader.TimeStamp);
 
   // Output stream.header.id, and keep track of the current position to update
   // it later when the payload is fully decoded and can be bound to a valid
@@ -216,8 +206,8 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
   packet.EncodeUInt16(pevent->BufferContext.LoggerId);
 
   // Output stream.context.uuid.
-  WriteGUID(packet, pevent->EventHeader.ProviderId);
-  WriteGUID(packet, pevent->EventHeader.ActivityId);
+  EncodeGUID(packet, pevent->EventHeader.ProviderId);
+  EncodeGUID(packet, pevent->EventHeader.ActivityId);
 
   // Output stream.context.header_type.
   packet.EncodeUInt16(pevent->EventHeader.HeaderType);
@@ -248,9 +238,6 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
   // Update the event_id, now we have the full layout information.
   event_id = metadata_.GetIdForEvent(descr);
   packet.UpdateUInt32(event_id_position, event_id);
-
-  // This flag must be turned true only when the packet is emitted.
-  stream_context_emitted_ = true;
 
   return true;
 }
@@ -659,10 +646,6 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
       << "};\n\n";
 
   out << "stream {\n"
-    //<< "  packet.context := struct {\n"
-    //<< "    uint64  timestamp_begin;\n"
-    //<< "    uint64  timestamp_end;\n"
-    //<< "  };\n"
       << "  event.header := struct {\n"
       << "    uint64  timestamp;\n"
       << "    uint32  id;\n"

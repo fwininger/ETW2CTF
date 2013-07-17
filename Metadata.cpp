@@ -81,16 +81,16 @@ const char* Metadata::Packet::raw_bytes() const {
   return reinterpret_cast<const char*>(&buffer_[0]);
 }
 
-void Metadata::Packet::Reset(size_t size) {
-  buffer_.resize(size);
+void Metadata::Packet::Reset(size_t offset) {
+  buffer_.resize(offset);
 }
 
-void Metadata::Packet::UpdateUInt32(size_t pos, uint32_t value) {
-  assert(pos + 3 < buffer_.size());
-  buffer_[pos] = static_cast<char>(value);
-  buffer_[pos + 1] = static_cast<char>(value >> 8);
-  buffer_[pos + 2] = static_cast<char>(value >> 16);
-  buffer_[pos + 3] = static_cast<char>(value >> 24);
+void Metadata::Packet::UpdateUInt32(size_t offset, uint32_t value) {
+  assert(offset + 3 < buffer_.size());
+  buffer_[offset] = static_cast<char>(value);
+  buffer_[offset + 1] = static_cast<char>(value >> 8);
+  buffer_[offset + 2] = static_cast<char>(value >> 16);
+  buffer_[offset + 3] = static_cast<char>(value >> 24);
 }
 
 void Metadata::Packet::EncodeUInt8(uint8_t value) {
@@ -112,8 +112,8 @@ void Metadata::Packet::EncodeUInt64(uint64_t value) {
   EncodeUInt32(static_cast<uint32_t>(value >> 32));
 }
 
-void Metadata::Packet::EncodeBytes(const uint8_t* value, size_t len) {
-  for (size_t i = 0; i < len; ++i)
+void Metadata::Packet::EncodeBytes(const uint8_t* value, size_t length) {
+  for (size_t i = 0; i < length; ++i)
     EncodeUInt8(value[i]);
 }
 
