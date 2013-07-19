@@ -126,7 +126,7 @@ bool ETWConsumer::ConsumeAllEvents() {
   if (handles.empty())
     return false;
 
-  // Reserve some memory space for internal buffer.
+  // Reserve some memory space for internal buffers.
   data_property_buffer_.resize(1024);
   formatted_property_buffer_.resize(1024);
   map_info_buffer_.resize(1024);
@@ -271,7 +271,7 @@ bool ETWConsumer::DecodePayload(
   // null-terminated string. Those events are generated via EventWriteString
   // function.
   if ((pevent->EventHeader.Flags & EVENT_HEADER_FLAG_STRING_ONLY) != 0) {
-    // Write string data.
+    // Encode string data.
     LPWSTR wptr = (LPWSTR)pevent->UserData;
     std::string str = convertString(wptr);
     packet.EncodeString(str);
@@ -345,6 +345,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   size_t count = pinfo->EventPropertyInfoArray[field_index].count;
   size_t length = pinfo->EventPropertyInfoArray[field_index].length;
   size_t flags = pinfo->EventPropertyInfoArray[field_index].Flags;
+
+  // Keep a raw byte pointer to ease indirection through pinfo.
   PBYTE raw_info = (PBYTE)pinfo;
 
   // Retrieve field name.
@@ -368,6 +370,9 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   unsigned int in_type = field.nonStructType.InType;
   unsigned int out_type = field.nonStructType.OutType;
   size_t map_name_offset = field.nonStructType.MapNameOffset;
+
+  // Descriptor used to fetch properties information. Size 2 is
+  // needed to fetch length of aggregate types.
   PROPERTY_DATA_DESCRIPTOR data_descriptors[2];
   unsigned int descriptor_count = 0;
 
@@ -394,6 +399,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   if (status != ERROR_SUCCESS)
     return false;
 
+  // TODO(bergeret): This is too big. Figure out the way to handle aggregate
+  //     types and split this function.
   // Try to decode the property with in/out type.
   Metadata::Field::FieldType field_type = Metadata::Field::INVALID;
   switch (in_type) {
@@ -688,7 +695,7 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
       return false;
   }
 
-  // Commit the results.
+  // Commit the result.
   *result = out.str();
   return true;
 }

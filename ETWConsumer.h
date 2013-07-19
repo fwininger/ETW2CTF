@@ -49,11 +49,8 @@ namespace etw2ctf {
 // Decoded payloads are serialized into CTF packets.
 class ETWConsumer {
  public:
-  typedef void (WINAPI *ProcessEventCallback)(PEVENT_RECORD pEvent);
-  typedef ULONG (WINAPI *ProcessBufferCallback)(PEVENT_TRACE_LOGFILE pTrace);
-
   // Check whether the list of registered trace is empty.
-  // @returns true when there is not traces to consume, false otherwise.
+  // @returns true when there is no traces to consume, false otherwise.
   bool Empty() const { return traces_.empty(); }
 
   // Add a trace file for consuming.
@@ -65,14 +62,14 @@ class ETWConsumer {
   // Set the global event callback called by the Windows API.
   // This callback must be a trampoline to this->ProcessEvent(...).
   // @param ec the callback called for each event.
-  void SetEventCallback(ProcessEventCallback ec) {
+  void SetEventCallback(PEVENT_RECORD_CALLBACK ec) {
     event_callback_ = ec;
   }
 
   // Set the global buffer callback called by the Windows API.
   // This callback must be a trampoline to this->ProcessBuffer(...).
   // @param bc the callback called for each buffer.
-  void SetBufferCallback(ProcessBufferCallback bc) {
+  void SetBufferCallback(PEVENT_TRACE_BUFFER_CALLBACK bc) {
     buffer_callback_ = bc;
   }
 
@@ -125,8 +122,8 @@ class ETWConsumer {
   std::vector<std::wstring> traces_;
 
   // Callbacks to register to the ETW API.
-  ProcessEventCallback event_callback_;
-  ProcessBufferCallback buffer_callback_;
+  PEVENT_RECORD_CALLBACK event_callback_;
+  PEVENT_TRACE_BUFFER_CALLBACK buffer_callback_;
 
   // The dictionary of event layouts.
   Metadata metadata_;

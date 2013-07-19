@@ -56,7 +56,7 @@ class Metadata {
   // @returns return a unique event id.
   size_t GetIdForEvent(const Event& event);
 
-  // Get the number of event in our dictionary.
+  // Get the number of events in our dictionary.
   // returns the number of events.
   size_t size() const { return events_.size(); }
 
@@ -107,7 +107,8 @@ class Metadata::Event {
   // Remove all fields.
   void Reset() { fields_.clear(); }
 
-  // Add a field to the layout.
+  // Add a field to the layout. The added field is assumed to have a unique
+  // name.
   // @param field the field to add.
   void AddField(const Field& field);
 
@@ -192,7 +193,8 @@ class Metadata::Field {
   std::string field_size_;
 };
 
-// This class holds a binary encoded event describe by an event.
+// This class holds an encoded event with a binary layout describe by
+// the corresponding description in the Metadata dictionary.
 class Metadata::Packet {
  public:
   // Returns a pointer to the raw bytes encoded in this packet.
@@ -201,11 +203,11 @@ class Metadata::Packet {
   // Returns the current size of the encoded packet.
   size_t size() const;
 
-  // Remove every byte encoded after the offset.
+  // Remove every bytes encoded after the offset.
   // @param offset the offset of first byte to remove.
   void Reset(size_t offset);
 
-  // Update an encoded value at a given position.
+  // Update an encoded 32-bit value at a given position.
   // @param position the position to update.
   // @param the new value to encode.
   void UpdateUInt32(size_t position, uint32_t value);

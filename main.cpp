@@ -24,16 +24,16 @@
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // ETW2CTF translates a trace file from ETW (Event Tracing for Windows) trace
-// file to the CTF (Common Trace Format).
+// file format to the CTF (Common Trace Format) trace file format.
 //
-// ETW (Event Tracing for windows) provide the ability to trace windows kernel
+// ETW (Event Tracing for windows) provides the ability to trace Windows kernel
 // and user-space application for debugging or profiling. ETL files are binary
 // encoded file format, but ETW provides an API to retrieve the events format.
 //
 // See: http://msdn.microsoft.com/en-us/library/windows/desktop/bb968803(v=vs.85).aspx
 //
 // The performance SDK (an optional include from the Microsoft SDK) provides
-// performance analysis tools to gather ETW traces. The SDK also install some
+// performance analysis tools to gather ETW traces. The SDK also installs some
 // manifest to describe performance events.
 //
 // See: http://msdn.microsoft.com/en-us/performance/cc825801.aspx
@@ -77,7 +77,7 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
     return FALSE;
   producer.OpenStream(stream_name);
 
-  // Write stream header.
+  // Encode and Write stream header.
   Metadata::Packet packet;
   consumer.ProcessHeader(packet);
   producer.Write(packet.raw_bytes(), packet.size());
@@ -110,19 +110,25 @@ int wmain(int argc, wchar_t** argv) {
   // Consume trace files.
   producer.OpenStream(L"stream");
 
-  // Write stream header.
+  // Encode and Write stream header.
+  // The stream header must always be generated here because it is possible
+  // to process an empty trace, without any buffer.
   Metadata::Packet packet;
   consumer.ProcessHeader(packet);
   producer.Write(packet.raw_bytes(), packet.size());
 
-  // Consume all events. Events and buffers are processed via callbacks.
+  // Consume all events. The ETW API will call our registered callbacks on
+  // each buffer and each event. Callbacks forward the processing to the
+  // consumer via ProcessEvent and ProcessBuffer. After the processing of each
+  // event by the consumer, the packet (encoded event) is written to the
+  // producer.
   if (!consumer.ConsumeAllEvents()) {
     std::wcerr << L"Could not consume traces files." << std::endl;
     return -1;
   }
   producer.CloseStream();
 
-  // Produce the metadata build during events processing.
+  // Serialize the metadata build during events processing.
   producer.OpenStream(L"metadata");
   std::string metadata;
   if (!consumer.SerializeMetadata(&metadata))
