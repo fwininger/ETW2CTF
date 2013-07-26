@@ -29,6 +29,9 @@
 #include <iostream>
 #include <sstream>
 
+// This pragma adds a dependency on the tracing library. This is needed until
+// we get a build script.
+// TODO(bergeret): Use a tool to produce build files (*.sln).
 #pragma comment(lib, "tdh.lib")
 
 namespace etw2ctf {
@@ -60,29 +63,32 @@ std::string GuidToString(const GUID& guid) {
   return std::string(buffer);
 }
 
-std::string convertString(const wchar_t* pstr) {
+std::string ConvertString(const wchar_t* pstr) {
+  assert(pstr != NULL);
   std::wstring wstr(pstr);
   return std::string(wstr.begin(), wstr.end());
 }
 
-void EncodeLargeInteger(Metadata::Packet& packet, const LARGE_INTEGER& value) {
-  packet.EncodeUInt32(value.LowPart);
-  packet.EncodeUInt32(value.HighPart);
+void EncodeLargeInteger(const LARGE_INTEGER& value, Metadata::Packet* packet) {
+  assert(packet != NULL);
+  packet->EncodeUInt32(value.LowPart);
+  packet->EncodeUInt32(value.HighPart);
 }
 
-void EncodeGUID(Metadata::Packet& packet, const GUID& guid) {
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 24));
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 16));
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 8));
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data1));
+void EncodeGUID(const GUID& guid, Metadata::Packet* packet) {
+  assert(packet != NULL);
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 24));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 16));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 8));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data1));
 
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data2 >> 8));
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data2));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data2 >> 8));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data2));
 
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data3 >> 8));
-  packet.EncodeUInt8(static_cast<uint8_t>(guid.Data3));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data3 >> 8));
+  packet->EncodeUInt8(static_cast<uint8_t>(guid.Data3));
 
-  packet.EncodeBytes(guid.Data4, 8);
+  packet->EncodeBytes(guid.Data4, 8);
 }
 
 }  // namespace
@@ -153,27 +159,27 @@ bool ETWConsumer::ConsumeAllEvents() {
   return valid;
 }
 
-// This function is executed for each stream.
-void ETWConsumer::ProcessHeader(Metadata::Packet& packet) {
+void ETWConsumer::ProcessHeader(Metadata::Packet* packet) {
+  assert(packet != NULL);
+
   const uint32_t kCtfMagicNumber = 0xC1FC1FC1;
 
   // Output trace.header.magic.
-  packet.EncodeUInt32(kCtfMagicNumber);
+  packet->EncodeUInt32(kCtfMagicNumber);
 
   // Output trace.header.uuid.
-  EncodeGUID(packet, ETWConverterGuid);
+  EncodeGUID(ETWConverterGuid, packet);
 }
 
-// This function is executed before each buffer.
 bool ETWConsumer::ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
   assert(ptrace != NULL);
   return true;
 }
 
-// This function is executed for each event.
 bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
-                               Metadata::Packet& packet) {
+                               Metadata::Packet* packet) {
   assert(pevent != NULL);
+  assert(packet != NULL);
 
   // Skip tracing events.
   if (IsEqualGUID(pevent->EventHeader.ProviderId, EventTraceGuid) &&
@@ -181,70 +187,73 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
     return false;
   }
   // Output stream.header.timestamp.
-  EncodeLargeInteger(packet, pevent->EventHeader.TimeStamp);
+  EncodeLargeInteger(pevent->EventHeader.TimeStamp, packet);
 
   // Output stream.header.id, and keep track of the current position to update
   // it later when the payload is fully decoded and can be bound to a valid
   // unique event id.
   size_t event_id = 0;
-  size_t event_id_position = packet.size();
-  packet.EncodeUInt32(event_id);
+  size_t event_id_position = packet->size();
+  packet->EncodeUInt32(event_id);
 
   // Output stream.context.ev_*.
-  packet.EncodeUInt16(pevent->EventHeader.EventDescriptor.Id);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Version);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Channel);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Level);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Opcode);
-  packet.EncodeUInt16(pevent->EventHeader.EventDescriptor.Task);
-  packet.EncodeUInt64(pevent->EventHeader.EventDescriptor.Keyword);
+  packet->EncodeUInt16(pevent->EventHeader.EventDescriptor.Id);
+  packet->EncodeUInt8(pevent->EventHeader.EventDescriptor.Version);
+  packet->EncodeUInt8(pevent->EventHeader.EventDescriptor.Channel);
+  packet->EncodeUInt8(pevent->EventHeader.EventDescriptor.Level);
+  packet->EncodeUInt8(pevent->EventHeader.EventDescriptor.Opcode);
+  packet->EncodeUInt16(pevent->EventHeader.EventDescriptor.Task);
+  packet->EncodeUInt64(pevent->EventHeader.EventDescriptor.Keyword);
 
   // Output stream.context.pid/tid/cpu_id.
-  packet.EncodeUInt32(pevent->EventHeader.ProcessId);
-  packet.EncodeUInt32(pevent->EventHeader.ThreadId);
-  packet.EncodeUInt8(pevent->BufferContext.ProcessorNumber);
-  packet.EncodeUInt16(pevent->BufferContext.LoggerId);
+  packet->EncodeUInt32(pevent->EventHeader.ProcessId);
+  packet->EncodeUInt32(pevent->EventHeader.ThreadId);
+  packet->EncodeUInt8(pevent->BufferContext.ProcessorNumber);
+  packet->EncodeUInt16(pevent->BufferContext.LoggerId);
 
   // Output stream.context.uuid.
-  EncodeGUID(packet, pevent->EventHeader.ProviderId);
-  EncodeGUID(packet, pevent->EventHeader.ActivityId);
+  EncodeGUID(pevent->EventHeader.ProviderId, packet);
+  EncodeGUID(pevent->EventHeader.ActivityId, packet);
 
   // Output stream.context.header_type.
-  packet.EncodeUInt16(pevent->EventHeader.HeaderType);
+  packet->EncodeUInt16(pevent->EventHeader.HeaderType);
 
   // Output stream.context.header_flags.
-  packet.EncodeUInt16(pevent->EventHeader.Flags);
-  packet.EncodeUInt16(pevent->EventHeader.Flags);
+  packet->EncodeUInt16(pevent->EventHeader.Flags);
+  packet->EncodeUInt16(pevent->EventHeader.Flags);
 
   // Output stream.context.header_properties.
-  packet.EncodeUInt16(pevent->EventHeader.EventProperty);
-  packet.EncodeUInt16(pevent->EventHeader.EventProperty);
+  packet->EncodeUInt16(pevent->EventHeader.EventProperty);
+  packet->EncodeUInt16(pevent->EventHeader.EventProperty);
 
   // Output cpu_id.
-  packet.EncodeUInt8(pevent->BufferContext.ProcessorNumber);
+  packet->EncodeUInt8(pevent->BufferContext.ProcessorNumber);
 
   // Decode the packet payload.
   Metadata::Event descr;
-  size_t payload_position = packet.size();
+  size_t payload_position = packet->size();
 
-  if (!DecodePayload(pevent, packet, descr)) {
+  if (!DecodePayload(pevent, packet, &descr)) {
     // On failure, remove packet data and metadata, and send the raw payload.
     descr.Reset();
-    packet.Reset(payload_position);
-    if (!SendRawPayload(pevent, packet, descr))
+    packet->Reset(payload_position);
+    if (!SendRawPayload(pevent, packet, &descr))
       return false;
   }
 
   // Update the event_id, now we have the full layout information.
   event_id = metadata_.GetIdForEvent(descr);
-  packet.UpdateUInt32(event_id_position, event_id);
+  packet->UpdateUInt32(event_id_position, event_id);
 
   return true;
 }
 
 bool ETWConsumer::SendRawPayload(PEVENT_RECORD pevent,
-    Metadata::Packet& packet, Metadata::Event& descr) {
+                                 Metadata::Packet* packet,
+                                 Metadata::Event* descr) {
   assert(pevent != NULL);
+  assert(packet != NULL);
+  assert(descr != NULL);
 
   // Get raw data pointer and size.
   USHORT length = pevent->UserDataLength;
@@ -253,19 +262,21 @@ bool ETWConsumer::SendRawPayload(PEVENT_RECORD pevent,
   // Create the metadata fields.
   Metadata::Field field_size(Metadata::Field::UINT16, "size");
   Metadata::Field field_data(Metadata::Field::BINARY_VAR, "data", "size");
-  descr.AddField(field_size);
-  descr.AddField(field_data);
+  descr->AddField(field_size);
+  descr->AddField(field_data);
 
   // Encode the length and the payload.
-  packet.EncodeUInt16(length);
-  packet.EncodeBytes(static_cast<uint8_t*>(data), length);
+  packet->EncodeUInt16(length);
+  packet->EncodeBytes(static_cast<uint8_t*>(data), length);
 
   return true;
 }
 
 bool ETWConsumer::DecodePayload(
-     PEVENT_RECORD pevent, Metadata::Packet& packet, Metadata::Event& descr) {
+     PEVENT_RECORD pevent, Metadata::Packet* packet, Metadata::Event* descr) {
   assert(pevent != NULL);
+  assert(packet != NULL);
+  assert(descr != NULL);
 
   // If the EVENT_HEADER_FLAG_STRING_ONLY flag is set, the event data is a
   // null-terminated string. Those events are generated via EventWriteString
@@ -273,12 +284,12 @@ bool ETWConsumer::DecodePayload(
   if ((pevent->EventHeader.Flags & EVENT_HEADER_FLAG_STRING_ONLY) != 0) {
     // Encode string data.
     LPWSTR wptr = (LPWSTR)pevent->UserData;
-    std::string str = convertString(wptr);
-    packet.EncodeString(str);
+    std::string str = ConvertString(wptr);
+    packet->EncodeString(str);
 
     // Create the metadata fields.
     Metadata::Field field_data(Metadata::Field::STRING, "data");
-    descr.AddField(field_data);
+    descr->AddField(field_data);
     return true;
   }
 
@@ -306,16 +317,16 @@ bool ETWConsumer::DecodePayload(
   }
 
   // Retrieve event descriptor information.
-  descr.set_info(pinfo->EventGuid,
-                 pevent->EventHeader.EventDescriptor.Opcode,
-                 pevent->EventHeader.EventDescriptor.Version,
-                 pevent->EventHeader.EventDescriptor.Id);
+  descr->set_info(pinfo->EventGuid,
+                  pevent->EventHeader.EventDescriptor.Opcode,
+                  pevent->EventHeader.EventDescriptor.Version,
+                  pevent->EventHeader.EventDescriptor.Id);
 
   // Retrieve event opcode name.
   if (pinfo->OpcodeNameOffset > 0) {
     LPWSTR opcode_ptr = (LPWSTR)&packet_info_buffer_[pinfo->OpcodeNameOffset];
-    std::string opcode_name = convertString(opcode_ptr);
-    descr.set_name(opcode_name);
+    std::string opcode_name = ConvertString(opcode_ptr);
+    descr->set_name(opcode_name);
   }
 
   // Decode each field.
@@ -332,10 +343,12 @@ bool ETWConsumer::DecodePayload(
 bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
                                      PTRACE_EVENT_INFO pinfo,
                                      unsigned int field_index,
-                                     Metadata::Packet& packet,
-                                     Metadata::Event& descr) {
+                                     Metadata::Packet* packet,
+                                     Metadata::Event* descr) {
   assert(pevent != NULL);
   assert(pinfo != NULL);
+  assert(packet != NULL);
+  assert(descr != NULL);
 
   // Retrieve the field to decode.
   const EVENT_PROPERTY_INFO& field =
@@ -353,7 +366,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   assert(field.NameOffset != 0);
   size_t name_offset = field.NameOffset;
   LPWSTR name_ptr = (LPWSTR)(&raw_info[name_offset]);
-  std::string field_name = convertString(name_ptr);
+  std::string field_name = ConvertString(name_ptr);
 
   // TODO(bergeret): Handle aggregate types (struct, array, ...).
   if (flags != 0) {
@@ -405,13 +418,13 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   Metadata::Field::FieldType field_type = Metadata::Field::INVALID;
   switch (in_type) {
     case TDH_INTYPE_UNICODESTRING:
-      packet.EncodeString(convertString((LPWSTR)raw_data));
-      descr.AddField(Metadata::Field(Metadata::Field::STRING, field_name));
+      packet->EncodeString(ConvertString((LPWSTR)raw_data));
+      descr->AddField(Metadata::Field(Metadata::Field::STRING, field_name));
       return true;
 
     case TDH_INTYPE_ANSISTRING:
-      packet.EncodeString((const char*)raw_data);
-      descr.AddField(Metadata::Field(Metadata::Field::STRING, field_name));
+      packet->EncodeString((const char*)raw_data);
+      descr->AddField(Metadata::Field(Metadata::Field::STRING, field_name));
       return true;
 
     case TDH_INTYPE_INT8:
@@ -436,8 +449,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       }
 
       if (property_size == 1) {
-        packet.EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data));
-        descr.AddField(Metadata::Field(field_type, field_name));
+        packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data));
+        descr->AddField(Metadata::Field(field_type, field_name));
         return true;
       }
       break;
@@ -464,8 +477,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       }
 
       if (property_size == 2) {
-        packet.EncodeUInt16(*reinterpret_cast<uint16_t*>(raw_data));
-        descr.AddField(Metadata::Field(field_type, field_name));
+        packet->EncodeUInt16(*reinterpret_cast<uint16_t*>(raw_data));
+        descr->AddField(Metadata::Field(field_type, field_name));
         return true;
       }
       break;
@@ -492,8 +505,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       }
 
       if (property_size == 4) {
-        packet.EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr.AddField(Metadata::Field(field_type, field_name));
+        packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
+        descr->AddField(Metadata::Field(field_type, field_name));
         return true;
       }
       break;
@@ -514,40 +527,40 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       }
 
       if (property_size == 8) {
-        packet.EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr.AddField(Metadata::Field(field_type, field_name));
+        packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
+        descr->AddField(Metadata::Field(field_type, field_name));
         return true;
       }
       break;
 
     case TDH_INTYPE_BOOLEAN:
       if (property_size == 1) {
-        packet.EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data) != 0);
-        descr.AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
+        packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data) != 0);
+        descr->AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
         return true;
       } else if (property_size == 4) {
-        packet.EncodeUInt8(*reinterpret_cast<uint32_t*>(raw_data) != 0);
-        descr.AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
+        packet->EncodeUInt8(*reinterpret_cast<uint32_t*>(raw_data) != 0);
+        descr->AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
         return true;
       }
       break;
 
     case TDH_INTYPE_GUID:
       if (property_size == 16) {
-        packet.EncodeBytes(raw_data, 16);
-        descr.AddField(Metadata::Field(Metadata::Field::GUID, field_name));
+        packet->EncodeBytes(raw_data, 16);
+        descr->AddField(Metadata::Field(Metadata::Field::GUID, field_name));
         return true;
       }
       break;
 
     case TDH_INTYPE_POINTER:
       if (property_size == 4) {
-        packet.EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr.AddField(Metadata::Field(Metadata::Field::XINT32, field_name));
+        packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
+        descr->AddField(Metadata::Field(Metadata::Field::XINT32, field_name));
         return true;
       } else if (property_size == 8) {
-        packet.EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr.AddField(Metadata::Field(Metadata::Field::XINT64, field_name));
+        packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
+        descr->AddField(Metadata::Field(Metadata::Field::XINT64, field_name));
         return true;
       }
       break;
@@ -557,6 +570,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 }
 
 bool ETWConsumer::SerializeMetadata(std::string* result) const {
+  assert(result != NULL);
+
   std::stringstream out;
 
   out << "/* CTF 1.8 */\n";
@@ -691,7 +706,7 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
   for (size_t i = 0; i < metadata_.size(); ++i) {
     size_t event_id = i + 1;
     const Metadata::Event& descr = metadata_.GetEventWithId(i);
-    if (!SerializeMetadataEvent(out, descr, event_id))
+    if (!SerializeMetadataEvent(descr, event_id, &out))
       return false;
   }
 
@@ -700,93 +715,97 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
   return true;
 }
 
-bool ETWConsumer::SerializeMetadataEvent(
-    std::stringstream& out, const Metadata::Event& descr, size_t event_id) const {
+bool ETWConsumer::SerializeMetadataEvent(const Metadata::Event& descr,
+                                         size_t event_id,
+                                         std::stringstream* out) const {
+  assert(out != NULL);
 
-  out << "event {\n"
-      << "  id = " << event_id << ";\n";
+  *out << "event {\n"
+       << "  id = " << event_id << ";\n";
 
   if (descr.name().empty()) {
-    out << "  name = \"event" << event_id << "\";\n";
+    *out << "  name = \"event" << event_id << "\";\n";
   } else {
-    out << "  name = \"" << descr.name() << "\";\n";
+    *out << "  name = \"" << descr.name() << "\";\n";
   }
 
   // Event Fields
-  out <<"  fields := struct {\n"
-      << "    uint8   cpuid;\n";
+  *out <<"  fields := struct {\n"
+       << "    uint8   cpuid;\n";
 
   for (size_t i = 0; i < descr.size(); ++i) {
-    if (!SerializeMetadataField(out, descr.at(i)))
+    if (!SerializeMetadataField(descr.at(i), out))
       return false;
   }
-  out <<"  };\n";
+  *out <<"  };\n";
 
-  out <<"};\n\n";
+  *out <<"};\n\n";
 
   return true;
 }
 
-bool ETWConsumer::SerializeMetadataField(std::stringstream& out,
-                                         const Metadata::Field& field) const {
+bool ETWConsumer::SerializeMetadataField(const Metadata::Field& field,
+                                         std::stringstream* out) const {
+  assert(out != NULL);
+
   switch (field.type()) {
   case Metadata::Field::STRUCT_BEGIN:
-    out << "    struct   " << field.name() << "{\n";
+    *out << "    struct   " << field.name() << "{\n";
     return true;
   case Metadata::Field::STRUCT_END:
-    out << "    };\n";
+    *out << "    };\n";
     return true;
   case Metadata::Field::BINARY_FIXED:
-    out << "    uint8   " << field.name()
-        << "[" << field.size() << "]"
-        << ";\n";
+    *out << "    uint8   " << field.name()
+         << "[" << field.size() << "]"
+         << ";\n";
     return true;
   case Metadata::Field::BINARY_VAR:
-    out << "    uint8   " << field.name()
-        << "[" << field.field_size() << "]"
-        << ";\n";
+    *out << "    uint8   " << field.name()
+         << "[" << field.field_size() << "]"
+         << ";\n";
     return true;
   case Metadata::Field::INT8:
-    out << "    int8    " << field.name() << ";\n";
+    *out << "    int8    " << field.name() << ";\n";
     return true;
   case Metadata::Field::INT16:
-    out << "    int16   " << field.name() << ";\n";
+    *out << "    int16   " << field.name() << ";\n";
     return true;
   case Metadata::Field::INT32:
-    out << "    int32   " << field.name() << ";\n";
+    *out << "    int32   " << field.name() << ";\n";
     return true;
   case Metadata::Field::INT64:
-    out << "    int64   " << field.name() << ";\n";
+    *out << "    int64   " << field.name() << ";\n";
     return true;
   case Metadata::Field::UINT8:
-    out << "    uint8   " << field.name() << ";\n";
+    *out << "    uint8   " << field.name() << ";\n";
     return true;
   case Metadata::Field::UINT16:
-    out << "    uint16  " << field.name() << ";\n";
+    *out << "    uint16  " << field.name() << ";\n";
     return true;
   case Metadata::Field::UINT32:
-    out << "    uint32  " << field.name() << ";\n";
+    *out << "    uint32  " << field.name() << ";\n";
     return true;
   case Metadata::Field::UINT64:
-    out << "    uint64  " << field.name() << ";\n";
+    *out << "    uint64  " << field.name() << ";\n";
     return true;
   case Metadata::Field::XINT8:
-    out << "    xint8   " << field.name() << ";\n";
+    *out << "    xint8   " << field.name() << ";\n";
     return true;
   case Metadata::Field::XINT16:
-    out << "    xint16  " << field.name() << ";\n";
+    *out << "    xint16  " << field.name() << ";\n";
     return true;
   case Metadata::Field::XINT32:
-    out << "    xint32  " << field.name() << ";\n";
+    *out << "    xint32  " << field.name() << ";\n";
     return true;
   case Metadata::Field::XINT64:
-    out << "    xint64  " << field.name() << ";\n";
+    *out << "    xint64  " << field.name() << ";\n";
     return true;
   case Metadata::Field::STRING:
-    out << "    string  " << field.name() << ";\n";
+    *out << "    string  " << field.name() << ";\n";
     return true;
   case Metadata::Field::GUID:
-    out << "    struct  uuid  "<< field.name() << ";\n";
+    *out << "    struct  uuid  "<< field.name() << ";\n";
     return true;
   }
 

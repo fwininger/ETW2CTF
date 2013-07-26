@@ -56,10 +56,16 @@ bool CTFProducer::CloseStream() {
   if (!stream_.is_open())
     return false;
   stream_.close();
-  return !stream_.fail();
+
+  if (stream_.fail())
+    return false;
+
+  return true;
 }
 
 bool CTFProducer::Write(const char* raw, size_t length) {
+  assert(raw != NULL);
+
   if (!stream_.is_open())
     return false;
   assert(stream_.good());

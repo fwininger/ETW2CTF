@@ -55,12 +55,12 @@ bool Metadata::Field::operator==(const Field& field) const {
       field_size_.compare(field.field_size_) == 0;
 }
 
-size_t Metadata::GetIdForEvent(const Event& evt) {
+size_t Metadata::GetIdForEvent(const Event& event) {
   for (size_t i = 0; i < events_.size(); ++i) {
-    if (evt == events_[i])
+    if (event == events_[i])
       return i + 1;
   }
-  events_.push_back(evt);
+  events_.push_back(event);
   return events_.size();
 }
 

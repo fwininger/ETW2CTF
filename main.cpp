@@ -58,9 +58,11 @@ etw2ctf::ETWConsumer consumer;
 etw2ctf::CTFProducer producer;
 
 void WINAPI ProcessEvent(PEVENT_RECORD pevent) {
+  assert(pevent != NULL);
+
   Metadata::Packet packet;
 
-  if (!consumer.ProcessEvent(pevent, packet))
+  if (!consumer.ProcessEvent(pevent, &packet))
     return;
 
   // Write the packet into the stream.
@@ -68,6 +70,8 @@ void WINAPI ProcessEvent(PEVENT_RECORD pevent) {
 }
 
 ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
+  assert(ptrace != NULL);
+
   // Close the previous stream.
   producer.CloseStream();
 
@@ -79,7 +83,7 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
 
   // Encode and Write stream header.
   Metadata::Packet packet;
-  consumer.ProcessHeader(packet);
+  consumer.ProcessHeader(&packet);
   producer.Write(packet.raw_bytes(), packet.size());
 
   if (!consumer.ProcessBuffer(ptrace))
@@ -91,7 +95,6 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
 }  // namespace
 
 int wmain(int argc, wchar_t** argv) {
-
   // TODO(bergeret): command line parsing.
   producer.OpenFolder(L"ctf");
 
@@ -114,7 +117,7 @@ int wmain(int argc, wchar_t** argv) {
   // The stream header must always be generated here because it is possible
   // to process an empty trace, without any buffer.
   Metadata::Packet packet;
-  consumer.ProcessHeader(packet);
+  consumer.ProcessHeader(&packet);
   producer.Write(packet.raw_bytes(), packet.size());
 
   // Consume all events. The ETW API will call our registered callbacks on

@@ -50,20 +50,21 @@ class Metadata {
   class Packet;
 
   // Get a unique event id for this event.
-  // If the event already exists, the function return the previous id,
+  // If the event already exists the function returns the previous id,
   // otherwise it returns a newly created event id.
-  // @param the event to find a unique event id.
-  // @returns return a unique event id.
+  // @param event The event whose id we wish to find.
+  // @returns a unique event id.
   size_t GetIdForEvent(const Event& event);
 
-  // Get the number of events in our dictionary.
-  // returns the number of events.
+  // @returns the number of events in the dictionary.
   size_t size() const { return events_.size(); }
 
-  // Get an event with a specific id.
-  // @param event_id the event_id to retrieve.
-  // returns the requested event.
-  const Event& GetEventWithId(size_t event_id) const { return events_.at(event_id); }
+  // Looks up an event by id.
+  // @param event_id The id of the event to retrieve.
+  // @returns the requested event.
+  const Event& GetEventWithId(size_t event_id) const {
+    return events_.at(event_id);
+  }
 
  private:
   // Dictionary of event definitions.
@@ -75,8 +76,7 @@ class Metadata {
 class Metadata::Event {
  public:
   // Constructor.
-  Event() :
-    opcode_(0), version_(0), event_id_(0) {
+  Event() : opcode_(0), version_(0), event_id_(0) {
   }
 
   // Accessors.
@@ -101,7 +101,7 @@ class Metadata::Event {
 
   // Compare the event and fields.
   // @param event the event to compare with.
-  // returns true when the event descriptor and layout are the same.
+  // @returns true when the event descriptor and layout are the same.
   bool operator==(const Event& event) const;
 
   // Remove all fields.
@@ -126,6 +126,7 @@ class Metadata::Event {
   std::vector<Metadata::Field> fields_;
 };
 
+// This class describes the layout of a field.
 class Metadata::Field {
  public:
   // Type of Field supported.
@@ -151,6 +152,13 @@ class Metadata::Field {
     GUID
   };
 
+  // @name Constructors.
+  // @{
+  // @param type The type of the encoded layout.
+  // @param name The name of the field.
+  // @param size The number of elements in an aggregate.
+  // @param field_size The name of the field containing the number of elements
+  //     in an aggregate type.
   Field() : type_(INVALID), size_(0) {
   }
 
@@ -165,24 +173,29 @@ class Metadata::Field {
   Field(FieldType type, const std::string& name, const std::string& field_size)
       : type_(type), name_(name), size_(0), field_size_(field_size) {
   }
+  // @}
 
-  // Accessors.
+  // @name Accessors.
+  // @{
   FieldType type() const { return type_; }
   const std::string& name() const { return name_; }
   size_t size() const { return size_; }
   const std::string&  field_size() const { return field_size_; }
+  // @}
 
-  // Comparator.
+  // @name Comparators.
+  // @{
   bool operator==(const Field& field) const;
   bool operator!=(const Field& field) const {
     return !(*this == field);
   }
+  // @}
 
  private:
-  // Field Type.
+  // Field type.
   FieldType type_;
 
-  // Field Name.
+  // Field name.
   std::string name_;
 
   // The number of elements in aggregate types.
@@ -193,14 +206,14 @@ class Metadata::Field {
   std::string field_size_;
 };
 
-// This class holds an encoded event with a binary layout describe by
+// This class holds an encoded event with a binary layout described by
 // the corresponding description in the Metadata dictionary.
 class Metadata::Packet {
  public:
-  // Returns a pointer to the raw bytes encoded in this packet.
+  // @returns a pointer to the raw bytes encoded in this packet.
   const char* raw_bytes() const;
 
-  // Returns the current size of the encoded packet.
+  // @returns the current size of the encoded packet.
   size_t size() const;
 
   // Remove every bytes encoded after the offset.
@@ -212,7 +225,7 @@ class Metadata::Packet {
   // @param the new value to encode.
   void UpdateUInt32(size_t position, uint32_t value);
 
-  // Encode a 8-bit value.
+  // Encode an 8-bit value.
   // @param value the value to encode.
   void EncodeUInt8(uint8_t value);
 

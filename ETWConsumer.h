@@ -37,6 +37,7 @@
 #include <evntcons.h>
 #include <tdh.h>
 
+#include <cassert>
 #include <string>
 #include <vector>
 
@@ -45,24 +46,25 @@
 namespace etw2ctf {
 
 // The ETW consumer uses the windows API to consume ETW events. By using the
-// Trace Data Helper (THD), the converter decodes payloads and events layout.
+// Trace Data Helper (THD), the converter decodes payloads and event layouts.
 // Decoded payloads are serialized into CTF packets.
 class ETWConsumer {
  public:
   // Check whether the list of registered trace is empty.
-  // @returns true when there is no traces to consume, false otherwise.
+  // @returns true when there are no traces to consume, false otherwise.
   bool Empty() const { return traces_.empty(); }
 
   // Add a trace file for consuming.
-  // @param filename the trace file.
+  // @param filename the path to the trace file.
   void AddTraceFile(std::wstring filename) {
     traces_.push_back(filename);
   }
 
   // Set the global event callback called by the Windows API.
   // This callback must be a trampoline to this->ProcessEvent(...).
-  // @param ec the callback called for each event.
+  // @param ec the callback to be called for each event.
   void SetEventCallback(PEVENT_RECORD_CALLBACK ec) {
+    assert(ec != NULL);
     event_callback_ = ec;
   }
 
@@ -70,6 +72,7 @@ class ETWConsumer {
   // This callback must be a trampoline to this->ProcessBuffer(...).
   // @param bc the callback called for each buffer.
   void SetBufferCallback(PEVENT_TRACE_BUFFER_CALLBACK bc) {
+    assert(bc != NULL);
     buffer_callback_ = bc;
   }
 
@@ -85,14 +88,14 @@ class ETWConsumer {
 
   // Callback called at each stream opening, and append CTF stream header.
   // @param packet the packet to encode the stream header.
-  void ProcessHeader(Metadata::Packet& packet);
+  void ProcessHeader(Metadata::Packet* packet);
 
   // Callback called for each ETW event. The ETW event is serialized into a
   // CTF packet.
   // @param pevent the ETW event to convert.
   // @param packet on success, contains the serialized CTF event.
   // @returns true on success, false otherwise.
-  bool ProcessEvent(PEVENT_RECORD pevent, Metadata::Packet& packet);
+  bool ProcessEvent(PEVENT_RECORD pevent, Metadata::Packet* packet);
 
   // Callback called at the beginning of each ETW buffer.
   // @param ptrace the ETW buffer information.
@@ -106,17 +109,18 @@ class ETWConsumer {
 
  private:
   bool DecodePayload(
-      PEVENT_RECORD pevent, Metadata::Packet& packet, Metadata::Event& descr);
+      PEVENT_RECORD pevent, Metadata::Packet* packet, Metadata::Event* descr);
   bool SendRawPayload(
-      PEVENT_RECORD pevent, Metadata::Packet& packet, Metadata::Event& descr);
+      PEVENT_RECORD pevent, Metadata::Packet* packet, Metadata::Event* descr);
 
   bool DecodePayloadField(PEVENT_RECORD pevent, PTRACE_EVENT_INFO pinfo,
-      unsigned int field, Metadata::Packet& packet, Metadata::Event& descr);
+      unsigned int field, Metadata::Packet* packet, Metadata::Event* descr);
 
-  bool SerializeMetadataEvent(std::stringstream& out,
-                              const Metadata::Event& descr, size_t id) const;
-  bool SerializeMetadataField(std::stringstream& out,
-                              const Metadata::Field& field) const;
+  bool SerializeMetadataEvent(const Metadata::Event& descr,
+                              size_t id,
+                              std::stringstream* out) const;
+  bool SerializeMetadataField(const Metadata::Field& field,
+                              std::stringstream* out) const;
 
   // Trace files to consume.
   std::vector<std::wstring> traces_;
