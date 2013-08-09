@@ -332,10 +332,67 @@ bool ETWConsumer::DecodePayload(
   // Decode each field.
   for (size_t i = 0; i < pinfo->TopLevelPropertyCount; ++i) {
     if (!DecodePayloadField(pevent, pinfo, i, packet, descr)) {
-      // TODO(bergeret): We should have a fallback that send the field raw.
-      return false;
+      // Send this field in raw.
+      if (!SendRawPayloadField(pevent, pinfo, i, packet, descr))
+        return false;
     }
   }
+
+  return true;
+}
+
+bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
+                                      PTRACE_EVENT_INFO pinfo,
+                                      unsigned int field_index,
+                                      Metadata::Packet* packet,
+                                      Metadata::Event* descr) const {
+  assert(pevent != NULL);
+  assert(pinfo != NULL);
+  assert(packet != NULL);
+  assert(descr != NULL);
+
+  // Retrieve the field to decode.
+  const EVENT_PROPERTY_INFO& field =
+      pinfo->EventPropertyInfoArray[field_index];
+
+  // Field length.
+  size_t length = pinfo->EventPropertyInfoArray[field_index].length;
+
+  // Determine the offset
+  size_t offset = 0;
+  for (size_t i = 0; i < field_index; ++i)
+    offset += pinfo->EventPropertyInfoArray[i].length;
+
+  if (offset + length > pevent->UserDataLength)
+    return false;
+
+  // Retrieve data.
+  PBYTE raw_data = (PBYTE)pevent->UserData;
+  uint8_t* data = static_cast<uint8_t*>(&raw_data[offset]);
+
+  // Keep a raw byte pointer to ease indirection through pinfo.
+  PBYTE raw_info = (PBYTE)pinfo;
+
+  // Retrieve field name.
+  assert(field.NameOffset != 0);
+  size_t name_offset = field.NameOffset;
+  LPWSTR name_ptr = (LPWSTR)(&raw_info[name_offset]);
+  std::string field_name = ConvertString(name_ptr);
+  std::string field_name_size = field_name + "_size";
+
+  // Create the metadata fields.
+  Metadata::Field field_size(Metadata::Field::UINT16, field_name_size);
+  Metadata::Field field_data(Metadata::Field::BINARY_VAR,
+                             field_name,
+                             field_name_size);
+  // TODO(florianw): We can have a name clash, add a struct to put the two
+  // fields together.
+  descr->AddField(field_size);
+  descr->AddField(field_data);
+
+  // Encode the length and the payload.
+  packet->EncodeUInt16(length);
+  packet->EncodeBytes(data, length);
 
   return true;
 }
@@ -356,7 +413,6 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
   // Retrieve field information.
   size_t count = pinfo->EventPropertyInfoArray[field_index].count;
-  size_t length = pinfo->EventPropertyInfoArray[field_index].length;
   size_t flags = pinfo->EventPropertyInfoArray[field_index].Flags;
 
   // Keep a raw byte pointer to ease indirection through pinfo.

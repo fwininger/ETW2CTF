@@ -116,6 +116,12 @@ class ETWConsumer {
   bool DecodePayloadField(PEVENT_RECORD pevent, PTRACE_EVENT_INFO pinfo,
       unsigned int field, Metadata::Packet* packet, Metadata::Event* descr);
 
+  bool SendRawPayloadField(PEVENT_RECORD pevent,
+                           PTRACE_EVENT_INFO pinfo,
+                           unsigned int field,
+                           Metadata::Packet* packet,
+                           Metadata::Event* descr) const;
+
   bool SerializeMetadataEvent(const Metadata::Event& descr,
                               size_t id,
                               std::stringstream* out) const;
