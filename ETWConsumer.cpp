@@ -29,6 +29,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "Dissectors.h"
+
 // This pragma adds a dependency on the tracing library. This is needed until
 // we get a build script.
 // TODO(bergeret): Use a tool to produce build files (*.sln).
@@ -234,11 +236,22 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
   size_t payload_position = packet->size();
 
   if (!DecodePayload(pevent, packet, &descr)) {
-    // On failure, remove packet data and metadata, and send the raw payload.
+    // On failure, remove packet data and metadata.
     descr.Reset();
     packet->Reset(payload_position);
-    if (!SendRawPayload(pevent, packet, &descr))
-      return false;
+
+    // Try to decode the payload using a dissector.
+    const GUID& guid = pevent->EventHeader.ProviderId;
+    uint32_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
+    char* data = static_cast<char*>(pevent->UserData);
+    uint32_t length = pevent->UserDataLength;
+    bool decoded =
+       DecodePayloadWithDissectors(guid, opcode, data, length, packet, &descr);
+    if (!decoded) {
+      // Send the raw payload.
+      if (!SendRawPayload(pevent, packet, &descr))
+        return false;
+    }
   }
 
   // Update the event_id, now we have the full layout information.
