@@ -1,5 +1,5 @@
 # This file is used by gcl to get repository specific information.
 CODE_REVIEW_SERVER: codereview.appspot.com
 VIEW_VC: https://github.com/fwininger/ETW2CTF/commit/
-CC_LIST: etienneb@chromium.com, chrisha@chromium.org, fw.centrale@gmail.com
+CC_LIST: etienneb@chromium.com, chrisha@chromium.org, fw.centrale@gmail.com, fdoray@chromium.org
 TRY_ON_UPLOAD: False
