@@ -136,8 +136,6 @@ bool ETWConsumer::ConsumeAllEvents() {
 
   // Reserve some memory space for internal buffers.
   data_property_buffer_.resize(1024);
-  formatted_property_buffer_.resize(1024);
-  map_info_buffer_.resize(1024);
   packet_info_buffer_.resize(64*1024);
 
   // Ask the ETW API to consume all traces and calls the registered callbacks.
@@ -154,8 +152,6 @@ bool ETWConsumer::ConsumeAllEvents() {
 
   // Free unused memory.
   data_property_buffer_.clear();
-  formatted_property_buffer_.clear();
-  map_info_buffer_.clear();
   packet_info_buffer_.clear();
 
   return valid;
@@ -309,6 +305,7 @@ bool ETWConsumer::DecodePayload(
   // Decode the metadata via trace data helper (TDH) using
   // TdhGetEventInformation.
   DWORD buffer_size = packet_info_buffer_.size();
+  ::memset(&packet_info_buffer_[0], 0, buffer_size);
   PTRACE_EVENT_INFO pinfo =
       reinterpret_cast<PTRACE_EVENT_INFO>(&packet_info_buffer_[0]);
 
@@ -451,7 +448,6 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   // Not an aggregate type.
   unsigned int in_type = field.nonStructType.InType;
   unsigned int out_type = field.nonStructType.OutType;
-  size_t map_name_offset = field.nonStructType.MapNameOffset;
 
   // Descriptor used to fetch properties information. Size 2 is
   // needed to fetch length of aggregate types.
@@ -473,6 +469,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   // Get a pointer to a buffer large enough to hold the property.
   if (property_size >= data_property_buffer_.size())
     data_property_buffer_.resize(property_size);
+  ::memset(&data_property_buffer_[0], 0, data_property_buffer_.size());
   PBYTE raw_data = reinterpret_cast<PBYTE>(&data_property_buffer_[0]);
 
   // Retrieve the property.

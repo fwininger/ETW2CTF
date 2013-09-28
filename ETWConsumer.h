@@ -50,6 +50,9 @@ namespace etw2ctf {
 // Decoded payloads are serialized into CTF packets.
 class ETWConsumer {
  public:
+  ETWConsumer() : event_callback_(NULL), buffer_callback_(NULL) {
+  }
+
   // Check whether the list of registered trace is empty.
   // @returns true when there are no traces to consume, false otherwise.
   bool Empty() const { return traces_.empty(); }
@@ -140,8 +143,6 @@ class ETWConsumer {
 
   // Temporary buffer used to hold raw data produced by the ETW API.
   std::vector<char> data_property_buffer_;
-  std::vector<char> formatted_property_buffer_;
-  std::vector<char> map_info_buffer_;
   std::vector<char> packet_info_buffer_;
 };
 

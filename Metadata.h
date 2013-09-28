@@ -77,6 +77,7 @@ class Metadata::Event {
  public:
   // Constructor.
   Event() : opcode_(0), version_(0), event_id_(0) {
+    ::memset(&guid_, 0, sizeof(GUID));
   }
 
   // Accessors.
@@ -245,6 +246,9 @@ class Metadata::Packet {
   // @param value the value to encode.
   // @param length the number of bytes to encode.
   void EncodeBytes(const uint8_t* value, size_t length);
+
+  // Encode a string terminated by zero.
+  // @param str the string to encode.
   void EncodeString(const std::string& str);
 
  private:
