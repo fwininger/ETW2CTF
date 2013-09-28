@@ -84,6 +84,11 @@ class Metadata::Event {
   const std::string& name() const { return name_; }
   void set_name(const std::string& name) { name_ = name; }
 
+  const GUID& guid() const { return guid_; }
+  unsigned char opcode() const { return opcode_; }
+  unsigned char version() const { return version_; };
+  unsigned short event_id() const { return event_id_; }
+
   // Set the event descriptor information.
   // @guid the guid of this event.
   // @opcode the opcode of this event.

@@ -786,6 +786,12 @@ bool ETWConsumer::SerializeMetadataEvent(const Metadata::Event& descr,
                                          std::stringstream* out) const {
   assert(out != NULL);
 
+  std::string guid = GuidToString(descr.guid());
+  *out << "// guid: " << guid
+       << " opcode:" << static_cast<unsigned int>(descr.opcode())
+       << " version:" << static_cast<unsigned int>(descr.version())
+       << " id:" << descr.event_id()
+       << "\n";
   *out << "event {\n"
        << "  id = " << event_id << ";\n";
 
