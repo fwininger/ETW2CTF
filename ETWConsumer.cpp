@@ -620,6 +620,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       break;
 
     case TDH_INTYPE_POINTER:
+    case TDH_INTYPE_SIZET:
       if (property_size == 4) {
         packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
         descr->AddField(Metadata::Field(Metadata::Field::XINT32, field_name));
