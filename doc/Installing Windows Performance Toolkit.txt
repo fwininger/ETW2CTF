@@ -1,0 +1,14 @@
+INSTALLING WINDOWS PERFORMANCE TOOLKIT
+================================================================================
+
+Windows Performance Toolkit (WPT) includes many useful tools to analyze the
+performance of a system and its applications. Xperf can be used to record
+kernel and user space traces. Xperfview and Windows Performance Analyzer let
+you analyze your traces in a graphical user interface.
+
+WPT can be installed as part of the Windows Assessment and Deployment Kit (ADK).
+
+Download ADK from the Microsoft website:
+  http://www.microsoft.com/en-ca/download/details.aspx?id=30652
+
+The ADK installer lets you choose to install only WPT.

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -23,13 +23,13 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "CTFProducer.h"
+#include "converter/ctf_producer.h"
 
 #include <cassert>
 #include <sstream>
 #include <string>
 
-namespace etw2ctf {
+namespace converter {
 
 bool CTFProducer::OpenFolder(const std::wstring& folder) {
   // TODO(bergeret): Do we need to clear the folder, or report a failure?
@@ -74,4 +74,4 @@ bool CTFProducer::Write(const char* raw, size_t length) {
   return true;
 }
 
-}  // namespace etw2ctf
+}  // namespace converter

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -23,20 +23,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "ETWConsumer.h"
+#include "converter/etw_consumer.h"
 
 #include <cassert>
 #include <iostream>
 #include <sstream>
 
-#include "Dissectors.h"
+#include "dissector/dissectors.h"
 
-// This pragma adds a dependency on the tracing library. This is needed until
-// we get a build script.
-// TODO(bergeret): Use a tool to produce build files (*.sln).
-#pragma comment(lib, "tdh.lib")
-
-namespace etw2ctf {
+namespace converter {
 
 namespace {
 
@@ -241,8 +236,9 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent,
     uint32_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
     char* data = static_cast<char*>(pevent->UserData);
     uint32_t length = pevent->UserDataLength;
-    bool decoded =
-       DecodePayloadWithDissectors(guid, opcode, data, length, packet, &descr);
+    bool decoded = dissector::DecodePayloadWithDissectors(guid, opcode, data,
+                                                          length, packet,
+                                                          &descr);
     if (!decoded) {
       // Send the raw payload.
       if (!SendRawPayload(pevent, packet, &descr))
@@ -885,4 +881,4 @@ bool ETWConsumer::SerializeMetadataField(const Metadata::Field& field,
   return false;
 }
 
-}  // namespace etw2ctf
+}  // namespace converter

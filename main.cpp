@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -46,16 +46,16 @@
 #include <iostream>
 #include <string>
 
-#include "CTFProducer.h"
-#include "ETWConsumer.h"
-#include "Metadata.h"
+#include "converter/ctf_producer.h"
+#include "converter/etw_consumer.h"
+#include "converter/metadata.h"
 
 namespace {
 
-using etw2ctf::Metadata;
+using converter::Metadata;
 
-etw2ctf::ETWConsumer consumer;
-etw2ctf::CTFProducer producer;
+converter::ETWConsumer consumer;
+converter::CTFProducer producer;
 
 void WINAPI ProcessEvent(PEVENT_RECORD pevent) {
   assert(pevent != NULL);

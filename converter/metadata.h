@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,15 +29,15 @@
 // The metadata keeps a collection of 'Event', and each 'Event' keeps a
 // collection of 'Field'. A 'Field' has a name and a type.
 
-#ifndef CTF2ETW_METADATA_H_
-#define CTF2ETW_METADATA_H_
+#ifndef CONVERTER_METADATA_H_
+#define CONVERTER_METADATA_H_
 
 #include <initguid.h>
 
 #include <cstdint>
 #include <vector>
 
-namespace etw2ctf {
+namespace converter {
 
 // This class implements a dictionary of event layouts. Each event encoded in
 // a CTF stream has a unique event id which correspond to the layout
@@ -261,6 +261,6 @@ class Metadata::Packet {
   std::vector<uint8_t> buffer_;
 };
 
-}  // namespace etw2ctf
+}  // namespace converter
 
-#endif  // CTF2ETW_METADATA_H_
+#endif  // CONVERTER_METADATA_H_

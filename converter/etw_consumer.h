@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,8 @@
 //
 // Implementation of the ETW consumer.
 
-#ifndef ETW2CTF_ETWCONSUMER_H
-#define ETW2CTF_ETWCONSUMER_H
+#ifndef CONVERTER_ETWCONSUMER_H_
+#define CONVERTER_ETWCONSUMER_H_
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
@@ -41,9 +41,9 @@
 #include <string>
 #include <vector>
 
-#include "Metadata.h"
+#include "converter/metadata.h"
 
-namespace etw2ctf {
+namespace converter {
 
 // The ETW consumer uses the windows API to consume ETW events. By using the
 // Trace Data Helper (THD), the converter decodes payloads and event layouts.
@@ -146,6 +146,6 @@ class ETWConsumer {
   std::vector<char> packet_info_buffer_;
 };
 
-}  // namespace etw2ctf
+}  // namespace converter
 
-#endif  // ETW2CTF_ETWCONSUMER_H
+#endif  // CONVERTER_ETWCONSUMER_H_

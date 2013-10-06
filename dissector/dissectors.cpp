@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -23,9 +23,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "Dissectors.h"
+#include "dissector/dissectors.h"
 
-namespace etw2ctf {
+namespace dissector {
 
 // Head of a linked list of registered dissectors.
 static Dissector* dissectors = NULL;
@@ -41,8 +41,8 @@ bool DecodePayloadWithDissectors(const GUID& guid,
                                  uint32_t opcode,
                                  char* payload,
                                  uint32_t length,
-                                 Metadata::Packet* packet,
-                                 Metadata::Event* descr) {
+                                 converter::Metadata::Packet* packet,
+                                 converter::Metadata::Event* descr) {
   Dissector* it = dissectors;
   size_t payload_position = packet->size();
 
@@ -79,16 +79,16 @@ class ChromeDissector : public Dissector {
                      uint32_t opcode,
                      char* payload,
                      uint32_t length,
-                     Metadata::Packet* packet,
-                     Metadata::Event* descr);
+                     converter::Metadata::Packet* packet,
+                     converter::Metadata::Event* descr);
 } chrome;
 
 bool ChromeDissector::DecodePayload(const GUID& guid,
                                     uint32_t opcode,
                                     char* payload,
                                     uint32_t length,
-                                    Metadata::Packet* packet,
-                                    Metadata::Event* descr) {
+                                    converter::Metadata::Packet* packet,
+                                    converter::Metadata::Event* descr) {
   if (!IsEqualGUID(guid, kChromeGuid))
     return false;
 
@@ -98,4 +98,4 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
 
 }  // namespace
 
-}  // namespace etw2ctf
+}  // namespace dissector

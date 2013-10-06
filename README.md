@@ -14,6 +14,10 @@ To run the software requires the Windows Performance Toolkit.
 
 Instructions:
 
+Generate a Visual Studio project using gyp.
+1. Get gyp using SVN. `svn co http://gyp.googlecode.com/svn/trunk gyp`
+2. Run gyp. `gyp\gyp --depth=. etw2ctf.gyp`
+
 Compile the code with Visual Studio 2010 (or later)
 
 Run the command: etw2ctf.exe ​&lt;tracefile>.etl

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,8 @@
 //
 // Implementation of the CTF stream management.
 
-#ifndef ETW2CTF_CTFPRODUCER_H_
-#define ETW2CTF_CTFPRODUCER_H_
+#ifndef CONVERTER_CTFPRODUCER_H_
+#define CONVERTER_CTFPRODUCER_H_
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
@@ -36,7 +36,7 @@
 #include <fstream>
 #include <vector>
 
-namespace etw2ctf {
+namespace converter {
 
 // This class implements the CTF stream management.
 //
@@ -85,6 +85,6 @@ class CTFProducer {
   std::ofstream stream_;
 };
 
-}  // namespace etw2ctf
+}  // namespace converter
 
-#endif  // ETW2CTF_CTFPRODUCER_H_
+#endif  // CONVERTER_CTFPRODUCER_H_

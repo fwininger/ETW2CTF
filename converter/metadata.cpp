@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -23,11 +23,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "Metadata.h"
+#include "converter/metadata.h"
 
 #include <cassert>
 
-namespace etw2ctf {
+namespace converter {
 
 bool Metadata::Event::operator==(const Event& event) const {
   if (guid_ != event.guid_ ||
@@ -123,4 +123,4 @@ void Metadata::Packet::EncodeString(const std::string& str) {
   EncodeBytes(raw, str.length() + 1);
 }
 
-}  // namespace etw2ctf
+}  // namespace converter

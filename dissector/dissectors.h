@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Florian Wininger, Etienne Bergeron
+// Copyright (c) 2013 The ETW2CTF Authors.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,11 +35,12 @@
 //    bool DecodePayload(...) { ... }
 // } dummy; // Performs the auto registry.
 
-#ifndef ETW2CTF_DISSECTORS_H
+#ifndef DISSECTOR_DISSECTORS_H_
+#define DISSECTOR_DISSECTORS_H_
 
-#include "Metadata.h"
+#include "converter/metadata.h"
 
-namespace etw2ctf {
+namespace dissector {
 
 // This class is the base class of all dissectors.
 class Dissector {
@@ -63,8 +64,8 @@ class Dissector {
                              uint32_t opcode,
                              char* payload,
                              uint32_t length,
-                             Metadata::Packet* packet,
-                             Metadata::Event* descr) = 0;
+                             converter::Metadata::Packet* packet,
+                             converter::Metadata::Event* descr) = 0;
 
   Dissector* next() { return next_; }
 
@@ -92,9 +93,9 @@ bool DecodePayloadWithDissectors(const GUID& guid,
                                  uint32_t opcode,
                                  char* payload,
                                  uint32_t payload_length,
-                                 Metadata::Packet* packet,
-                                 Metadata::Event* descr);
+                                 converter::Metadata::Packet* packet,
+                                 converter::Metadata::Event* descr);
 
-}  // namespace etw2ctf
+}  // namespace dissector
 
-#endif  // ETW2CTF_DISSECTORS_H
+#endif  // DISSECTOR_DISSECTORS_H_
