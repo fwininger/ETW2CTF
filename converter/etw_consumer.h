@@ -25,8 +25,8 @@
 //
 // Implementation of the ETW consumer.
 
-#ifndef CONVERTER_ETWCONSUMER_H_
-#define CONVERTER_ETWCONSUMER_H_
+#ifndef CONVERTER_ETW_CONSUMER_H_
+#define CONVERTER_ETW_CONSUMER_H_
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
@@ -148,4 +148,4 @@ class ETWConsumer {
 
 }  // namespace converter
 
-#endif  // CONVERTER_ETWCONSUMER_H_
+#endif  // CONVERTER_ETW_CONSUMER_H_

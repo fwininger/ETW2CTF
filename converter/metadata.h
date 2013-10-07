@@ -86,7 +86,7 @@ class Metadata::Event {
 
   const GUID& guid() const { return guid_; }
   unsigned char opcode() const { return opcode_; }
-  unsigned char version() const { return version_; };
+  unsigned char version() const { return version_; }
   unsigned short event_id() const { return event_id_; }
 
   // Set the event descriptor information.
