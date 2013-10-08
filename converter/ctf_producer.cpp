@@ -26,19 +26,50 @@
 #include "converter/ctf_producer.h"
 
 #include <cassert>
+#include <iostream>
 #include <sstream>
 #include <string>
 
 namespace converter {
 
-bool CTFProducer::OpenFolder(const std::wstring& folder) {
-  // TODO(bergeret): Do we need to clear the folder, or report a failure?
+bool CTFProducer::OpenFolder(const std::wstring& folder, bool overwrite) {
   if (!folder_.empty() || folder.empty())
     return false;
   folder_ = folder;
-  if (CreateDirectory(folder_.c_str(), NULL) == FALSE)
+
+  // Try to create the folder.
+  if (CreateDirectory(folder_.c_str(), NULL) == TRUE)
+    return true;
+
+  // We cannot overwrite the folder.
+  if (!overwrite || GetLastError() != ERROR_ALREADY_EXISTS)
     return false;
-  return TRUE;
+
+  // Erase all files in the folder.
+  bool erase_all_sucessful = true;
+  WIN32_FIND_DATA FindFileData;
+  std::wstring pattern = folder + L"\\*";
+  HANDLE hFind = FindFirstFile(pattern.c_str(), &FindFileData);
+  while (hFind != INVALID_HANDLE_VALUE) {
+    std::wstring filename = FindFileData.cFileName;
+    std::wstring path = folder + L"\\" + filename;
+
+    // Erase the current file.
+    if (filename != L"." && filename != L".." &&
+        DeleteFile(path.c_str()) == FALSE) {
+      std::wcerr << L"Could not erase file \"" << path << L"\"" << std::endl;
+      erase_all_sucessful = false;
+    }
+
+    // Move to the next file.
+    if (!FindNextFile(hFind, &FindFileData)) {
+      FindClose(hFind);
+      hFind = INVALID_HANDLE_VALUE;
+    }
+  }
+
+  // Returns success when all files are removed.
+  return erase_all_sucessful;
 }
 
 bool CTFProducer::OpenStream(const std::wstring& filename) {

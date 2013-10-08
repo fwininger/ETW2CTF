@@ -77,9 +77,16 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
 
   // Open the next buffer.
   std::wstring stream_name;
-  if (!consumer.GetBufferName(ptrace, &stream_name))
+  if (!consumer.GetBufferName(ptrace, &stream_name)) {
+    std::wcerr << L"Cannot get buffer name." << std::endl;
     return FALSE;
-  producer.OpenStream(stream_name);
+  }
+
+  if (!producer.OpenStream(stream_name)) {
+    std::wcerr << L"Cannot open output stream: \"" << stream_name << L"\""
+               << std::endl;
+    return FALSE;
+  }
 
   // Encode and Write stream header.
   Metadata::Packet packet;
@@ -92,15 +99,134 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
   return TRUE;
 }
 
+bool FileExists(const std::wstring& path) {
+  DWORD attrib = GetFileAttributes(path.c_str());
+  return (attrib != INVALID_FILE_ATTRIBUTES &&
+         !(attrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+struct Options {
+  bool help;
+  bool overwrite;
+  std::wstring output;
+  bool split_buffer;
+  std::vector<std::wstring> files;
+};
+
+void DefaultOptions(Options* options) {
+  assert(options != NULL);
+  options->help = false;
+  options->output = L"ctf";
+  options->overwrite = false;
+  options->split_buffer = false;
+}
+
+bool ParseOptions(int argc, wchar_t** argv, Options* options) {
+  assert(argv != NULL);
+  assert(options != NULL);
+
+  // Activate help when no arguments.
+  if (argc == 1) {
+    options->help = true;
+    return true;
+  }
+
+  for (int i = 1; i < argc; ++i) {
+    std::wstring arg(argv[i]);
+
+    // Not an option, push it as a file to process.
+    if (!arg.empty() && arg[0] != '-') {
+
+      // Check whether the file exists.
+      if (!FileExists(arg)) {
+        std::wcerr << "File doesn't exist: \"" << arg << "\"" << std::endl;
+        return false;
+      }
+      options->files.push_back(arg);
+      continue;
+    }
+
+    // Next argument may be a parameter.
+    std::wstring param;
+    if (i + 1 < argc)
+      param = argv[i + 1];
+
+    if (arg == L"-h" || arg == L"--help") {
+      options->help = true;
+      continue;
+    }
+
+    if (arg == L"--output" && !param.empty()) {
+      options->output = param;
+      ++i;
+      continue;
+    }
+
+    if (arg == L"--overwrite") {
+      options->overwrite = true;
+      continue;
+    }
+
+    if (arg == L"--split-buffer") {
+      options->split_buffer = true;
+      continue;
+    }
+
+    std::wcerr << L"Unknown argument: \"" << arg << L"\"" << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+void PrintUsage() {
+  std::wcerr
+      << "\n"
+      << "  USAGE: etw2ctf [options] <traces.etl>*\n"
+      << "\n"
+      << "  [options]\n"
+      << "    --help\n"
+      << "        Print this message.\n"
+      << "    --output [dir]\n"
+      << "        Specify the output directory for the produced CTF trace.\n"
+      << "    --overwrite\n"
+      << "        Overwrite the output directory.\n"
+      << "    --split-buffer\n"
+      << "        Split each ETW buffers in a separate CTF stream.\n"
+      << "\n"
+      << std::endl;
+}
+
 }  // namespace
 
 int wmain(int argc, wchar_t** argv) {
-  // TODO(bergeret): command line parsing.
-  producer.OpenFolder(L"ctf");
+  struct Options options;
 
-  for (int i = 1; i < argc; ++i) {
-    std::wstring filename(argv[i]);
-    consumer.AddTraceFile(filename);
+  // Initialize options with default values.
+  DefaultOptions(&options);
+
+  // Parse command-line options.
+  if (!ParseOptions(argc, argv, &options))
+    return -1;
+
+  // Print usage when requested or command-line empty.
+  if (options.help) {
+    PrintUsage();
+    return 0;
+  }
+
+  // Open the output folder.
+  if (!producer.OpenFolder(options.output, options.overwrite)) {
+    std::wcerr << L"Cannot open output directory \"" << options.output << L"\""
+               << std::endl;
+    return -1;
+  }
+
+  // Add traces to be consumed to the consumer.
+  for (std::vector<std::wstring>::iterator it = options.files.begin();
+       it != options.files.end();
+       ++it) {
+    consumer.AddTraceFile(*it);
   }
 
   // No trace files to consume.
@@ -108,10 +234,14 @@ int wmain(int argc, wchar_t** argv) {
     return 0;
 
   consumer.SetEventCallback(ProcessEvent);
-  consumer.SetBufferCallback(ProcessBuffer);
+  if (options.split_buffer)
+    consumer.SetBufferCallback(ProcessBuffer);
 
   // Consume trace files.
-  producer.OpenStream(L"stream");
+  if (!producer.OpenStream(L"stream")) {
+    std::wcerr << L"Cannot open output stream." << std::endl;
+    return -1;
+  }
 
   // Encode and Write stream header.
   // The stream header must always be generated here because it is possible
@@ -132,7 +262,11 @@ int wmain(int argc, wchar_t** argv) {
   producer.CloseStream();
 
   // Serialize the metadata build during events processing.
-  producer.OpenStream(L"metadata");
+  if (!producer.OpenStream(L"metadata")) {
+    std::wcerr << L"Cannot open metadata stream." << std::endl;
+    return -1;
+  }
+
   std::string metadata;
   if (!consumer.SerializeMetadata(&metadata))
     return -1;

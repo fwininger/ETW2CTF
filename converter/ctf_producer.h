@@ -46,7 +46,7 @@ namespace converter {
 // Example:
 //
 //  CTFProducer encoder;
-//  encoder.OpenFolder(L"ctf");
+//  encoder.OpenFolder(L"ctf", true);
 //  encoder.OpenStream(L"stream1");
 //  while (...)
 //    encoder.Write(buffer, length);
@@ -59,8 +59,10 @@ class CTFProducer {
 
   // Open the CTF root folder.
   // @param folder the root folder of the trace file.
+  // @param overwrite if |folder| already exists, this flag indicates if the
+  //     folder must be erased first.
   // @returns true on success, false otherwise.
-  bool OpenFolder(const std::wstring& folder);
+  bool OpenFolder(const std::wstring& folder, bool overwrite);
 
   // Open and change the active output stream.
   // @param name the name of the stream.
