@@ -38,6 +38,7 @@
 #include <tdh.h>
 
 #include <cassert>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -50,7 +51,11 @@ namespace converter {
 // Decoded payloads are serialized into CTF packets.
 class ETWConsumer {
  public:
-  ETWConsumer() : event_callback_(NULL), buffer_callback_(NULL) {
+  ETWConsumer()
+      : event_callback_(NULL),
+        buffer_callback_(NULL),
+        packet_total_bytes_(0),
+        packet_maximal_size_(0) {
   }
 
   // Check whether the list of registered trace is empty.
@@ -79,6 +84,10 @@ class ETWConsumer {
     buffer_callback_ = bc;
   }
 
+  // Set the maximal CTF packet size.
+  // @param size The maximal packet size.
+  void set_packet_maximal_size(size_t size) { packet_maximal_size_ = size; }
+
   // Consume all registered trace files.
   // @returns true on success, false if an error occurred.
   bool ConsumeAllEvents();
@@ -89,16 +98,11 @@ class ETWConsumer {
   // @returns true on success, false otherwise.
   bool GetBufferName(PEVENT_TRACE_LOGFILE ptrace, std::wstring* name) const;
 
-  // Callback called at each stream opening, and append CTF stream header.
-  // @param packet the packet to encode the stream header.
-  void ProcessHeader(Metadata::Packet* packet);
-
   // Callback called for each ETW event. The ETW event is serialized into a
   // CTF packet.
   // @param pevent the ETW event to convert.
-  // @param packet on success, contains the serialized CTF event.
   // @returns true on success, false otherwise.
-  bool ProcessEvent(PEVENT_RECORD pevent, Metadata::Packet* packet);
+  bool ProcessEvent(PEVENT_RECORD pevent);
 
   // Callback called at the beginning of each ETW buffer.
   // @param ptrace the ETW buffer information.
@@ -109,6 +113,18 @@ class ETWConsumer {
   // @param results on success, receives the metadata text representation.
   // @returns true on success, false otherwise.
   bool SerializeMetadata(std::string* results) const;
+
+  // Check if pending packets can make a full packet.
+  // @returns true if there is enough pending bytes.
+  bool IsFullPacketReady();
+
+  // Check if the pending queue is empty.
+  // @return true if the queue is empty, false otherwise.
+  bool IsSendingQueueEmpty();
+
+  // Remove the pending packets and build a full packet ready to send.
+  // @param packet Receives the full packet.
+  void BuildFullPacket(Metadata::Packet* packet);
 
  private:
   bool DecodePayload(
@@ -131,6 +147,16 @@ class ETWConsumer {
   bool SerializeMetadataField(const Metadata::Field& field,
                               std::stringstream* out) const;
 
+  void EncodePacketHeader(Metadata::Packet* packet,
+                          size_t* packet_context_offset);
+  void UpdatePacketHeader(size_t packet_context_offset,
+                          uint32_t content_size,
+                          uint32_t packet_size,
+                          Metadata::Packet* packet);
+
+  void AddPacketToSendingQueue(const Metadata::Packet& packet);
+  void PopPacketFromSendingQueue();
+
   // Trace files to consume.
   std::vector<std::wstring> traces_;
 
@@ -140,6 +166,15 @@ class ETWConsumer {
 
   // The dictionary of event layouts.
   Metadata metadata_;
+
+  // A pending queue of packets to send.
+  std::list<const Metadata::Packet> packets_;
+
+  // The total number of bytes in pending queue.
+  size_t packet_total_bytes_;
+
+  // The threshold before merging and sending pending packets.
+  size_t packet_maximal_size_;
 
   // Temporary buffer used to hold raw data produced by the ETW API.
   std::vector<char> data_property_buffer_;

@@ -60,13 +60,31 @@ converter::CTFProducer producer;
 void WINAPI ProcessEvent(PEVENT_RECORD pevent) {
   assert(pevent != NULL);
 
-  Metadata::Packet packet;
+  consumer.ProcessEvent(pevent);
 
-  if (!consumer.ProcessEvent(pevent, &packet))
-    return;
+  while (consumer.IsFullPacketReady()) {
+     // Write the full packet into the current stream.
+     Metadata::Packet output;
+     consumer.BuildFullPacket(&output);
+     const char* raw = reinterpret_cast<const char*>(output.raw_bytes());
+     if (!producer.Write(raw, output.size())) {
+       std::cerr << "Cannot write packet into stream." << std::endl;
+       return;
+     }
+  }
+}
 
-  // Write the packet into the stream.
-  producer.Write(packet.raw_bytes(), packet.size());
+void FlushEvents() {
+  while (!consumer.IsSendingQueueEmpty()) {
+     // Write the full packet into the current stream.
+     Metadata::Packet output;
+     consumer.BuildFullPacket(&output);
+     const char* raw = reinterpret_cast<const char*>(output.raw_bytes());
+     if (!producer.Write(raw, output.size())) {
+       std::cerr << "Cannot write packet into stream." << std::endl;
+       return;
+     }
+  }
 }
 
 ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
@@ -88,11 +106,6 @@ ULONG WINAPI ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
     return FALSE;
   }
 
-  // Encode and Write stream header.
-  Metadata::Packet packet;
-  consumer.ProcessHeader(&packet);
-  producer.Write(packet.raw_bytes(), packet.size());
-
   if (!consumer.ProcessBuffer(ptrace))
     return FALSE;
 
@@ -110,6 +123,7 @@ struct Options {
   bool overwrite;
   std::wstring output;
   bool split_buffer;
+  size_t packet_size;
   std::vector<std::wstring> files;
 };
 
@@ -119,6 +133,7 @@ void DefaultOptions(Options* options) {
   options->output = L"ctf";
   options->overwrite = false;
   options->split_buffer = false;
+  options->packet_size = 4096;
 }
 
 bool ParseOptions(int argc, wchar_t** argv, Options* options) {
@@ -172,6 +187,18 @@ bool ParseOptions(int argc, wchar_t** argv, Options* options) {
       continue;
     }
 
+    if (arg == L"--packet-size") {
+      std::string p(param.begin(), param.end());
+      int size = atoi(p.c_str());
+      if (size <= 1) {
+        std::wcerr << "Invalid packet size '" << param << "'" << std::endl;
+        return false;
+      }
+      ++i;
+      options->packet_size = size;
+      continue;
+    }
+
     std::wcerr << L"Unknown argument: \"" << arg << L"\"" << std::endl;
     return false;
   }
@@ -193,6 +220,8 @@ void PrintUsage() {
       << "        Overwrite the output directory.\n"
       << "    --split-buffer\n"
       << "        Split each ETW buffers in a separate CTF stream.\n"
+      << "    --packet-size <size>\n"
+      << "        Split CTF stream into CTF packets of <size> bytes.\n"
       << "\n"
       << std::endl;
 }
@@ -237,18 +266,13 @@ int wmain(int argc, wchar_t** argv) {
   if (options.split_buffer)
     consumer.SetBufferCallback(ProcessBuffer);
 
+  consumer.set_packet_maximal_size(options.packet_size);
+
   // Consume trace files.
   if (!producer.OpenStream(L"stream")) {
     std::wcerr << L"Cannot open output stream." << std::endl;
     return -1;
   }
-
-  // Encode and Write stream header.
-  // The stream header must always be generated here because it is possible
-  // to process an empty trace, without any buffer.
-  Metadata::Packet packet;
-  consumer.ProcessHeader(&packet);
-  producer.Write(packet.raw_bytes(), packet.size());
 
   // Consume all events. The ETW API will call our registered callbacks on
   // each buffer and each event. Callbacks forward the processing to the
@@ -259,6 +283,7 @@ int wmain(int argc, wchar_t** argv) {
     std::wcerr << L"Could not consume traces files." << std::endl;
     return -1;
   }
+  FlushEvents();
   producer.CloseStream();
 
   // Serialize the metadata build during events processing.

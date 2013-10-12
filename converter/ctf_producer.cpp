@@ -95,6 +95,9 @@ bool CTFProducer::CloseStream() {
 }
 
 bool CTFProducer::Write(const char* raw, size_t length) {
+  if (length == 0)
+    return true;
+
   assert(raw != NULL);
 
   if (!stream_.is_open())

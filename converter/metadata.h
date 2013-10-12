@@ -217,7 +217,7 @@ class Metadata::Field {
 class Metadata::Packet {
  public:
   // @returns a pointer to the raw bytes encoded in this packet.
-  const char* raw_bytes() const;
+  const uint8_t* raw_bytes() const;
 
   // @returns the current size of the encoded packet.
   size_t size() const;

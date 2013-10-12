@@ -75,10 +75,10 @@ size_t Metadata::Packet::size() const {
   return buffer_.size();
 }
 
-const char* Metadata::Packet::raw_bytes() const {
+const uint8_t* Metadata::Packet::raw_bytes() const {
   if (buffer_.empty())
     return NULL;
-  return reinterpret_cast<const char*>(&buffer_[0]);
+  return reinterpret_cast<const uint8_t*>(&buffer_[0]);
 }
 
 void Metadata::Packet::Reset(size_t offset) {
