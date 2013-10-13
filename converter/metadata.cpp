@@ -26,6 +26,7 @@
 #include "converter/metadata.h"
 
 #include <cassert>
+#include <string>
 
 namespace converter {
 
@@ -51,6 +52,7 @@ bool Metadata::Event::operator==(const Event& event) const {
 bool Metadata::Field::operator==(const Field& field) const {
   return type_ == field.type_ &&
       size_ == field.size_ &&
+      parent_ == field.parent_ &&
       name_.compare(field.name_) == 0 &&
       field_size_.compare(field.field_size_) == 0;
 }
@@ -66,7 +68,10 @@ size_t Metadata::GetIdForEvent(const Event& event) {
 
 void Metadata::Event::AddField(const Field& field) {
   for (size_t i = 0; i < fields_.size(); ++i) {
-    assert(fields_[i].name().compare(field.name()) != 0);
+    // Avoid same field name in a scope.
+    if (field.parent() == fields_[i].parent()) {
+      assert(fields_[i].name() == field.name());
+    }
   }
   fields_.push_back(field);
 }

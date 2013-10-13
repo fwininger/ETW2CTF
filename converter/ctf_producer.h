@@ -89,4 +89,4 @@ class CTFProducer {
 
 }  // namespace converter
 
-#endif  // CONVERTER_CTFPRODUCER_H_
+#endif  // CONVERTER_CTF_PRODUCER_H_

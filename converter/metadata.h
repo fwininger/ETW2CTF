@@ -113,6 +113,10 @@ class Metadata::Event {
   // Remove all fields.
   void Reset() { fields_.clear(); }
 
+  // Remove fields after offset.
+  // @param offset the offset of first field to remove.
+  void Reset(size_t offset) { fields_.resize(offset); }
+
   // Add a field to the layout. The added field is assumed to have a unique
   // name.
   // @param field the field to add.
@@ -165,19 +169,25 @@ class Metadata::Field {
   // @param size The number of elements in an aggregate.
   // @param field_size The name of the field containing the number of elements
   //     in an aggregate type.
-  Field() : type_(INVALID), size_(0) {
+  // @param parent The parent of this field.
+  Field() : type_(INVALID), size_(0), parent_(0) {
   }
 
-  Field(FieldType type, const std::string& name)
-      : type_(type), name_(name), size_(0) {
+  Field(FieldType type, const std::string& name, size_t parent)
+      : type_(type), name_(name), size_(0), parent_(parent) {
   }
 
-  Field(FieldType type, const std::string& name, size_t size)
-      : type_(type), name_(name), size_(size) {
+  Field(FieldType type, const std::string& name, size_t size, size_t parent)
+      : type_(type), name_(name), size_(size), parent_(parent) {
   }
 
-  Field(FieldType type, const std::string& name, const std::string& field_size)
-      : type_(type), name_(name), size_(0), field_size_(field_size) {
+  Field(FieldType type, const std::string& name, const std::string& field_size,
+        size_t parent)
+      : type_(type),
+        name_(name),
+        size_(0),
+        field_size_(field_size),
+        parent_(parent) {
   }
   // @}
 
@@ -187,6 +197,7 @@ class Metadata::Field {
   const std::string& name() const { return name_; }
   size_t size() const { return size_; }
   const std::string&  field_size() const { return field_size_; }
+  size_t parent() const { return parent_; }
   // @}
 
   // @name Comparators.
@@ -210,6 +221,9 @@ class Metadata::Field {
   // In case of a variable length array, the field_size contains the name of
   // the field holding the dynamic size.
   std::string field_size_;
+
+  // Parent ID of this field.
+  size_t parent_;
 };
 
 // This class holds an encoded event with a binary layout described by

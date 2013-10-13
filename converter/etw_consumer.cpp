@@ -35,6 +35,8 @@ namespace converter {
 
 namespace {
 
+const size_t kRootScope = static_cast<size_t>(-1);
+
 // Specify to CTF consumer that source come from ETW.
 // ETW2CTF GUID {29cb3580-13c6-4c85-a4cb-a2c0ffa68890}.
 const GUID ETWConverterGuid = { 0x29CB3580, 0x13C6, 0x4C85,
@@ -360,10 +362,12 @@ bool ETWConsumer::SendRawPayload(PEVENT_RECORD pevent,
   // Get raw data pointer and size.
   USHORT length = pevent->UserDataLength;
   PVOID data = pevent->UserData;
+  const size_t parent = kRootScope;
 
   // Create the metadata fields.
-  Metadata::Field field_size(Metadata::Field::UINT16, "size");
-  Metadata::Field field_data(Metadata::Field::BINARY_VAR, "data", "size");
+  typedef Metadata::Field Field;
+  Metadata::Field field_size(Field::UINT16, "size", parent);
+  Metadata::Field field_data(Field::BINARY_VAR, "data", "size", parent);
   descr->AddField(field_size);
   descr->AddField(field_data);
 
@@ -380,6 +384,9 @@ bool ETWConsumer::DecodePayload(
   assert(packet != NULL);
   assert(descr != NULL);
 
+  // Assume initial scope is the root scope.
+  const size_t parent = kRootScope;
+
   // If the EVENT_HEADER_FLAG_STRING_ONLY flag is set, the event data is a
   // null-terminated string. Those events are generated via EventWriteString
   // function.
@@ -390,7 +397,7 @@ bool ETWConsumer::DecodePayload(
     packet->EncodeString(str);
 
     // Create the metadata fields.
-    Metadata::Field field_data(Metadata::Field::STRING, "data");
+    Metadata::Field field_data(Metadata::Field::STRING, "data", parent);
     descr->AddField(field_data);
     return true;
   }
@@ -434,10 +441,19 @@ bool ETWConsumer::DecodePayload(
 
   // Decode each field.
   for (size_t i = 0; i < pinfo->TopLevelPropertyCount; ++i) {
-    if (!DecodePayloadField(pevent, pinfo, i, packet, descr)) {
+    size_t packet_offset = packet->size();
+    size_t descr_offset = descr->size();
+    if (!DecodePayloadField(pevent, pinfo, parent, i, packet, descr)) {
+      // Reset state.
+      packet->Reset(packet_offset);
+      descr->Reset(descr_offset);
       // Send this field in raw.
-      if (!SendRawPayloadField(pevent, pinfo, i, packet, descr))
+      if (!SendRawPayloadField(pevent, pinfo, parent, i, packet, descr)) {
+        // Reset state.
+        packet->Reset(packet_offset);
+        descr->Reset(descr_offset);
         return false;
+      }
     }
   }
 
@@ -446,6 +462,7 @@ bool ETWConsumer::DecodePayload(
 
 bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
                                       PTRACE_EVENT_INFO pinfo,
+                                      size_t parent,
                                       unsigned int field_index,
                                       Metadata::Packet* packet,
                                       Metadata::Event* descr) const {
@@ -474,24 +491,27 @@ bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
   uint8_t* data = static_cast<uint8_t*>(&raw_data[offset]);
 
   // Keep a raw byte pointer to ease indirection through pinfo.
-  PBYTE raw_info = (PBYTE)pinfo;
+  PBYTE raw_info = reinterpret_cast<PBYTE>(pinfo);
 
   // Retrieve field name.
   assert(field.NameOffset != 0);
   size_t name_offset = field.NameOffset;
   LPWSTR name_ptr = (LPWSTR)(&raw_info[name_offset]);
   std::string field_name = ConvertString(name_ptr);
-  std::string field_name_size = field_name + "_size";
+
+  // Create a scope for the structure.
+  unsigned int scope = descr->size();
+  descr->AddField(
+      Metadata::Field(Metadata::Field::STRUCT_BEGIN, field_name, parent));
 
   // Create the metadata fields.
-  Metadata::Field field_size(Metadata::Field::UINT16, field_name_size);
-  Metadata::Field field_data(Metadata::Field::BINARY_VAR,
-                             field_name,
-                             field_name_size);
-  // TODO(florianw): We can have a name clash, add a struct to put the two
-  // fields together.
-  descr->AddField(field_size);
-  descr->AddField(field_data);
+  descr->AddField(
+      Metadata::Field(Metadata::Field::UINT16, "size", scope));
+  descr->AddField(
+      Metadata::Field(Metadata::Field::BINARY_VAR, "data", "size", scope));
+
+  // Close the scope.
+  descr->AddField(Metadata::Field(Metadata::Field::STRUCT_END, "", scope));
 
   // Encode the length and the payload.
   packet->EncodeUInt16(length);
@@ -502,6 +522,7 @@ bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
 
 bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
                                      PTRACE_EVENT_INFO pinfo,
+                                     size_t parent,
                                      unsigned int field_index,
                                      Metadata::Packet* packet,
                                      Metadata::Event* descr) {
@@ -578,12 +599,15 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   switch (in_type) {
     case TDH_INTYPE_UNICODESTRING:
       packet->EncodeString(ConvertString((LPWSTR)raw_data));
-      descr->AddField(Metadata::Field(Metadata::Field::STRING, field_name));
+      // TODO(bergeret): We should keep unicode.
+      descr->AddField(
+          Metadata::Field(Metadata::Field::STRING, field_name, parent));
       return true;
 
     case TDH_INTYPE_ANSISTRING:
       packet->EncodeString((const char*)raw_data);
-      descr->AddField(Metadata::Field(Metadata::Field::STRING, field_name));
+      descr->AddField(
+          Metadata::Field(Metadata::Field::STRING, field_name, parent));
       return true;
 
     case TDH_INTYPE_INT8:
@@ -609,7 +633,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 1) {
         packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name));
+        descr->AddField(Metadata::Field(field_type, field_name, parent));
         return true;
       }
       break;
@@ -637,7 +661,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 2) {
         packet->EncodeUInt16(*reinterpret_cast<uint16_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name));
+        descr->AddField(Metadata::Field(field_type, field_name, parent));
         return true;
       }
       break;
@@ -665,7 +689,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 4) {
         packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name));
+        descr->AddField(Metadata::Field(field_type, field_name, parent));
         return true;
       }
       break;
@@ -687,7 +711,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 8) {
         packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name));
+        descr->AddField(Metadata::Field(field_type, field_name, parent));
         return true;
       }
       break;
@@ -695,11 +719,13 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
     case TDH_INTYPE_BOOLEAN:
       if (property_size == 1) {
         packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data) != 0);
-        descr->AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
+        descr->AddField(
+            Metadata::Field(Metadata::Field::UINT8, field_name, parent));
         return true;
       } else if (property_size == 4) {
         packet->EncodeUInt8(*reinterpret_cast<uint32_t*>(raw_data) != 0);
-        descr->AddField(Metadata::Field(Metadata::Field::UINT8, field_name));
+        descr->AddField(
+            Metadata::Field(Metadata::Field::UINT8, field_name, parent));
         return true;
       }
       break;
@@ -707,7 +733,8 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
     case TDH_INTYPE_GUID:
       if (property_size == 16) {
         packet->EncodeBytes(raw_data, 16);
-        descr->AddField(Metadata::Field(Metadata::Field::GUID, field_name));
+        descr->AddField(
+            Metadata::Field(Metadata::Field::GUID, field_name, parent));
         return true;
       }
       break;
@@ -716,11 +743,13 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
     case TDH_INTYPE_SIZET:
       if (property_size == 4) {
         packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr->AddField(Metadata::Field(Metadata::Field::XINT32, field_name));
+        descr->AddField(
+            Metadata::Field(Metadata::Field::XINT32, field_name, parent));
         return true;
       } else if (property_size == 8) {
         packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr->AddField(Metadata::Field(Metadata::Field::XINT64, field_name));
+        descr->AddField(
+            Metadata::Field(Metadata::Field::XINT64, field_name, parent));
         return true;
       }
       break;
@@ -862,7 +891,7 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
       << "  id = 0;\n"
       << "  name = \"unknown\";\n"
       << "  fields := struct {\n"
-      << "    uint8   cpuid;\n"
+      << "    uint8   cpuid;\n"  // TODO(etienneb): May clash with a field.
       << "  };\n"
       << "};\n\n";
 
@@ -870,8 +899,10 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
   for (size_t i = 0; i < metadata_.size(); ++i) {
     size_t event_id = i + 1;
     const Metadata::Event& descr = metadata_.GetEventWithId(i);
-    if (!SerializeMetadataEvent(descr, event_id, &out))
+    if (!SerializeMetadataEvent(descr, event_id, &out)) {
+      std::cerr << "Cannot serialize metadata." << std::endl;
       return false;
+    }
   }
 
   // Commit the result.
@@ -901,10 +932,10 @@ bool ETWConsumer::SerializeMetadataEvent(const Metadata::Event& descr,
 
   // Event Fields
   *out <<"  fields := struct {\n"
-       << "    uint8   cpuid;\n";
+       << "    uint8   cpuid;\n";  // TODO(etienneb): May clash with a field.
 
   for (size_t i = 0; i < descr.size(); ++i) {
-    if (!SerializeMetadataField(descr.at(i), out))
+    if (!SerializeMetadataField(descr, descr.at(i), out))
       return false;
   }
   *out <<"  };\n";
@@ -914,72 +945,84 @@ bool ETWConsumer::SerializeMetadataEvent(const Metadata::Event& descr,
   return true;
 }
 
-bool ETWConsumer::SerializeMetadataField(const Metadata::Field& field,
+bool ETWConsumer::SerializeMetadataField(const Metadata::Event& descr,
+                                         const Metadata::Field& field,
                                          std::stringstream* out) const {
   assert(out != NULL);
 
-  switch (field.type()) {
-  case Metadata::Field::STRUCT_BEGIN:
-    *out << "    struct   " << field.name() << "{\n";
-    return true;
-  case Metadata::Field::STRUCT_END:
-    *out << "    };\n";
-    return true;
-  case Metadata::Field::BINARY_FIXED:
-    *out << "    uint8   " << field.name()
-         << "[" << field.size() << "]"
-         << ";\n";
-    return true;
-  case Metadata::Field::BINARY_VAR:
-    *out << "    uint8   " << field.name()
-         << "[" << field.field_size() << "]"
-         << ";\n";
-    return true;
-  case Metadata::Field::INT8:
-    *out << "    int8    " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::INT16:
-    *out << "    int16   " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::INT32:
-    *out << "    int32   " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::INT64:
-    *out << "    int64   " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::UINT8:
-    *out << "    uint8   " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::UINT16:
-    *out << "    uint16  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::UINT32:
-    *out << "    uint32  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::UINT64:
-    *out << "    uint64  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::XINT8:
-    *out << "    xint8   " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::XINT16:
-    *out << "    xint16  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::XINT32:
-    *out << "    xint32  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::XINT64:
-    *out << "    xint64  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::STRING:
-    *out << "    string  " << field.name() << ";\n";
-    return true;
-  case Metadata::Field::GUID:
-    *out << "    struct  uuid  "<< field.name() << ";\n";
-    return true;
+  // Indent this field.
+  for (size_t p = field.parent(); p != kRootScope; p = descr.at(p).parent()) {
+    const Metadata::Field::FieldType type = descr.at(p).type();
+    if (type == Metadata::Field::STRUCT_BEGIN)
+      *out << "  ";
   }
 
-  return false;
+  // Dispatch the field type.
+  switch (field.type()) {
+  case Metadata::Field::STRUCT_BEGIN:
+    *out << "    struct  {\n";
+    return true;
+  case Metadata::Field::STRUCT_END:
+    *out << "    } " << descr.at(field.parent()).name();
+    break;
+  case Metadata::Field::BINARY_FIXED:
+    *out << "    uint8   " << field.name()
+         << "[" << field.size() << "]";
+    break;
+  case Metadata::Field::BINARY_VAR:
+    *out << "    uint8   " << field.name()
+         << "[" << field.field_size() << "]";
+    break;
+  case Metadata::Field::INT8:
+    *out << "    int8    " << field.name();
+    break;
+  case Metadata::Field::INT16:
+    *out << "    int16   " << field.name();
+    break;
+  case Metadata::Field::INT32:
+    *out << "    int32   " << field.name();
+    break;
+  case Metadata::Field::INT64:
+    *out << "    int64   " << field.name();
+    break;
+  case Metadata::Field::UINT8:
+    *out << "    uint8   " << field.name();
+    break;
+  case Metadata::Field::UINT16:
+    *out << "    uint16  " << field.name();
+    break;
+  case Metadata::Field::UINT32:
+    *out << "    uint32  " << field.name();
+    break;
+  case Metadata::Field::UINT64:
+    *out << "    uint64  " << field.name();
+    break;
+  case Metadata::Field::XINT8:
+    *out << "    xint8   " << field.name();
+    break;
+  case Metadata::Field::XINT16:
+    *out << "    xint16  " << field.name();
+    break;
+  case Metadata::Field::XINT32:
+    *out << "    xint32  " << field.name();
+    break;
+  case Metadata::Field::XINT64:
+    *out << "    xint64  " << field.name();
+    break;
+  case Metadata::Field::STRING:
+    *out << "    string  " << field.name();
+    break;
+  case Metadata::Field::GUID:
+    *out << "    struct  uuid  "<< field.name();
+    break;
+  default:
+    return false;
+  }
+
+  // End of declaration.
+  *out << ";\n";
+
+  return true;
 }
 
 }  // namespace converter
