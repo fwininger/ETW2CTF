@@ -70,7 +70,7 @@ void Metadata::Event::AddField(const Field& field) {
   for (size_t i = 0; i < fields_.size(); ++i) {
     // Avoid same field name in a scope.
     if (field.parent() == fields_[i].parent()) {
-      assert(fields_[i].name() == field.name());
+      assert(fields_[i].name() != field.name());
     }
   }
   fields_.push_back(field);
