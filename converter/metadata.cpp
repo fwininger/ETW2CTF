@@ -76,6 +76,14 @@ void Metadata::Event::AddField(const Field& field) {
   fields_.push_back(field);
 }
 
+uint64_t Metadata::Packet::timestamp() const {
+  return timestamp_;
+}
+
+void Metadata::Packet::set_timestamp(uint64_t time) {
+  timestamp_ = time;
+}
+
 size_t Metadata::Packet::size() const {
   return buffer_.size();
 }
@@ -96,6 +104,11 @@ void Metadata::Packet::UpdateUInt32(size_t offset, uint32_t value) {
   buffer_[offset + 1] = static_cast<char>(value >> 8);
   buffer_[offset + 2] = static_cast<char>(value >> 16);
   buffer_[offset + 3] = static_cast<char>(value >> 24);
+}
+
+void Metadata::Packet::UpdateUInt64(size_t offset, uint64_t value) {
+  UpdateUInt32(offset, static_cast<uint32_t>(value));
+  UpdateUInt32(offset + 4, static_cast<uint32_t>(value >> 32));
 }
 
 void Metadata::Packet::EncodeUInt8(uint8_t value) {

@@ -230,6 +230,14 @@ class Metadata::Field {
 // the corresponding description in the Metadata dictionary.
 class Metadata::Packet {
  public:
+
+  // @returns the timestamp of this packet.
+  uint64_t timestamp() const;
+
+  // Set the timestamp of this packet.
+  // @param time the timestamp this packet.
+  void set_timestamp(uint64_t time);
+
   // @returns a pointer to the raw bytes encoded in this packet.
   const uint8_t* raw_bytes() const;
 
@@ -242,8 +250,13 @@ class Metadata::Packet {
 
   // Update an encoded 32-bit value at a given position.
   // @param position the position to update.
-  // @param the new value to encode.
+  // @param value the new value to encode.
   void UpdateUInt32(size_t position, uint32_t value);
+
+  // Update an encoded 64-bit value at a given position.
+  // @param position the position to update.
+  // @param value the new value to encode.
+  void UpdateUInt64(size_t position, uint64_t value);
 
   // Encode an 8-bit value.
   // @param value the value to encode.
@@ -273,6 +286,9 @@ class Metadata::Packet {
  private:
   // Internal buffer holding the raw encoded bytes.
   std::vector<uint8_t> buffer_;
+
+  // Timestamp of this packet.
+  uint64_t timestamp_;
 };
 
 }  // namespace converter

@@ -68,12 +68,6 @@ std::string ConvertString(const wchar_t* pstr) {
   return std::string(wstr.begin(), wstr.end());
 }
 
-void EncodeLargeInteger(const LARGE_INTEGER& value, Metadata::Packet* packet) {
-  assert(packet != NULL);
-  packet->EncodeUInt32(value.LowPart);
-  packet->EncodeUInt32(value.HighPart);
-}
-
 void EncodeGUID(const GUID& guid, Metadata::Packet* packet) {
   assert(packet != NULL);
   packet->EncodeUInt8(static_cast<uint8_t>(guid.Data1 >> 24));
@@ -186,22 +180,25 @@ void ETWConsumer::BuildFullPacket(Metadata::Packet* output) {
   assert(packet_context_offset != 0);
 
   unsigned int packet_count = 0;
+  uint64_t start_timestamp = UINT64_MAX;
+  uint64_t stop_timestamp = 0;
 
   while (packet_total_bytes_ > 0) {
     const Metadata::Packet& packet = packets_.front();
-    if (output->size() + packet.size() > packet_maximal_size_)
-      break;
+    // Always encode the first packet: the payload of the first packet may be
+    // bigger than the maximal packet size.
+    if (packet_count != 0) {
+      // Stop appending packet when maximal size is reached.
+      if (output->size() + packet.size() > packet_maximal_size_)
+        break;
+    }
+
+    // Keep track of timestamps.
+    uint64_t timestamp = packet.timestamp();
+    start_timestamp = std::min<uint64_t>(start_timestamp, timestamp);
+    stop_timestamp = std::max<uint64_t>(stop_timestamp, timestamp);
 
     // Append this packet payload to the output packet.
-    output->EncodeBytes(packet.raw_bytes(), packet.size());
-    packet_count++;
-    PopPacketFromSendingQueue();
-  }
-
-  // This happens when a packet payload is bigger than the maximal packet size.
-  if (packet_count == 0) {
-    // Append anyway to the output packet.
-    const Metadata::Packet& packet = packets_.front();
     output->EncodeBytes(packet.raw_bytes(), packet.size());
     packet_count++;
     PopPacketFromSendingQueue();
@@ -220,7 +217,8 @@ void ETWConsumer::BuildFullPacket(Metadata::Packet* output) {
   uint32_t packet_size = output->size();
 
   // Update the output packet header.
-  UpdatePacketHeader(packet_context_offset, content_size, packet_size, output);
+  UpdatePacketHeader(packet_context_offset, content_size, packet_size,
+                     start_timestamp, stop_timestamp, output);
 }
 
 void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet,
@@ -243,11 +241,17 @@ void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet,
   packet->EncodeUInt32(0);
   // Output trace.header.packet_size.
   packet->EncodeUInt32(0);
+
+  // Output trace.header.start/stop_timestamp.
+  packet->EncodeUInt64(0);
+  packet->EncodeUInt64(0);
 }
 
 void ETWConsumer::UpdatePacketHeader(size_t packet_context_offset,
                                      uint32_t content_size,
                                      uint32_t packet_size,
+                                     uint64_t start_timestamp,
+                                     uint64_t stop_timestamp,
                                      Metadata::Packet* packet) {
   assert(packet != NULL);
 
@@ -257,6 +261,15 @@ void ETWConsumer::UpdatePacketHeader(size_t packet_context_offset,
 
   // packet_size is encoded in bits.
   packet->UpdateUInt32(packet_context_offset, packet_size * 8);
+  packet_context_offset += 4;
+
+  // Start timestamp.
+  packet->UpdateUInt64(packet_context_offset, start_timestamp);
+  packet_context_offset += 8;
+
+  // Stop timestamp.
+  packet->UpdateUInt64(packet_context_offset, stop_timestamp);
+  packet_context_offset += 8;
 }
 
 bool ETWConsumer::ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
@@ -276,7 +289,9 @@ bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent) {
   Metadata::Packet packet;
 
   // Output stream.header.timestamp.
-  EncodeLargeInteger(pevent->EventHeader.TimeStamp, &packet);
+  uint64_t timestamp = pevent->EventHeader.TimeStamp.QuadPart;
+  packet.set_timestamp(timestamp);
+  packet.EncodeUInt64(timestamp);
 
   // Output stream.header.id, and keep track of the current position to update
   // it later when the payload is fully decoded and can be bound to a valid
@@ -860,6 +875,8 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
       << "  packet.context := struct {\n"
       << "    uint32  content_size;\n"
       << "    uint32  packet_size;\n"
+      << "    uint64  timestamp_begin;\n"
+      << "    uint64  timestamp_end;\n"
       << "  };\n"
       << "  event.header := struct {\n"
       << "    uint64  timestamp;\n"

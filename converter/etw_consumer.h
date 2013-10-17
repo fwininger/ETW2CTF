@@ -155,6 +155,8 @@ class ETWConsumer {
   void UpdatePacketHeader(size_t packet_context_offset,
                           uint32_t content_size,
                           uint32_t packet_size,
+                          uint64_t start_timestamp,
+                          uint64_t stop_timestamp,
                           Metadata::Packet* packet);
 
   void AddPacketToSendingQueue(const Metadata::Packet& packet);
