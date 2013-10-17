@@ -30,7 +30,7 @@
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>  // NO LINT
+#include <windows.h>  // NOLINT
 
 #include <cstdint>
 #include <fstream>

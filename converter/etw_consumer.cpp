@@ -30,6 +30,7 @@
 #include <sstream>
 
 #include "dissector/dissectors.h"
+#include "etw_observer/etw_observer.h"
 
 namespace converter {
 
@@ -278,6 +279,13 @@ bool ETWConsumer::ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
 }
 
 bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent) {
+  FOR_EACH_ETW_OBSERVER(OnBeginProcessEvent(this, pevent));
+  bool res = ProcessEventInternal(pevent);
+  FOR_EACH_ETW_OBSERVER(OnEndProcessEvent(this, pevent));
+  return res;
+}
+
+bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   assert(pevent != NULL);
 
   // Skip tracing events.
@@ -618,6 +626,10 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
     unsigned int in_type = field.nonStructType.InType;
     unsigned int out_type = field.nonStructType.OutType;
+
+    FOR_EACH_ETW_OBSERVER(OnDecodePayloadField(this, parent, element,
+                                               field_name, in_type, out_type,
+                                               property_size, raw_data));
 
     // Decode the current field and append encoded value to the packet.
     Metadata::Field current_field;

@@ -49,6 +49,8 @@
         'converter/metadata.h',
         'dissector/dissectors.cpp',
         'dissector/dissectors.h',
+        'etw_observer/etw_observer.cpp',
+        'etw_observer/etw_observer.h',
       ],
     },
   ]

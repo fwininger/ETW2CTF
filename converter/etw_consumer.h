@@ -30,7 +30,7 @@
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>  // NO LINT
+#include <windows.h>  // NOLINT
 // Turns the DEFINE_GUID for EventTraceGuid into a const.
 #define INITGUID
 #include <guiddef.h>
@@ -127,6 +127,8 @@ class ETWConsumer {
   void BuildFullPacket(Metadata::Packet* packet);
 
  private:
+  bool ProcessEventInternal(PEVENT_RECORD pevent);
+
   bool DecodePayload(PEVENT_RECORD pevent, Metadata::Packet* packet,
                      Metadata::Event* descr);
   bool SendRawPayload(PEVENT_RECORD pevent, Metadata::Packet* packet,
