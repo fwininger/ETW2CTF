@@ -142,6 +142,8 @@ class Metadata::Field {
   // Type of Field supported.
   enum FieldType {
     INVALID,
+    ARRAY_FIXED,
+    ARRAY_VAR,
     STRUCT_BEGIN,
     STRUCT_END,
     BINARY_FIXED,
@@ -164,10 +166,10 @@ class Metadata::Field {
 
   // @name Constructors.
   // @{
-  // @param type The type of the encoded layout.
-  // @param name The name of the field.
-  // @param size The number of elements in an aggregate.
-  // @param field_size The name of the field containing the number of elements
+  // @param type the type of the encoded layout.
+  // @param name the name of the field.
+  // @param size the number of elements in an aggregate.
+  // @param field_size the name of the field containing the number of elements
   //     in an aggregate type.
   // @param parent The parent of this field.
   Field() : type_(INVALID), size_(0), parent_(0) {
@@ -196,7 +198,7 @@ class Metadata::Field {
   FieldType type() const { return type_; }
   const std::string& name() const { return name_; }
   size_t size() const { return size_; }
-  const std::string&  field_size() const { return field_size_; }
+  const std::string& field_size() const { return field_size_; }
   size_t parent() const { return parent_; }
   // @}
 

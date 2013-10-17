@@ -407,7 +407,7 @@ bool ETWConsumer::DecodePayload(
   // function.
   if ((pevent->EventHeader.Flags & EVENT_HEADER_FLAG_STRING_ONLY) != 0) {
     // Encode string data.
-    LPWSTR wptr = (LPWSTR)pevent->UserData;
+    LPWSTR wptr = static_cast<LPWSTR>(pevent->UserData);
     std::string str = ConvertString(wptr);
     packet->EncodeString(str);
 
@@ -449,7 +449,9 @@ bool ETWConsumer::DecodePayload(
 
   // Retrieve event opcode name.
   if (pinfo->OpcodeNameOffset > 0) {
-    LPWSTR opcode_ptr = (LPWSTR)&packet_info_buffer_[pinfo->OpcodeNameOffset];
+    size_t name_offset = pinfo->OpcodeNameOffset;
+    LPWSTR opcode_ptr =
+        reinterpret_cast<LPWSTR>(&packet_info_buffer_[name_offset]);
     std::string opcode_name = ConvertString(opcode_ptr);
     descr->set_name(opcode_name);
   }
@@ -502,7 +504,7 @@ bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
     return false;
 
   // Retrieve data.
-  PBYTE raw_data = (PBYTE)pevent->UserData;
+  PBYTE raw_data = static_cast<PBYTE>(pevent->UserData);
   uint8_t* data = static_cast<uint8_t*>(&raw_data[offset]);
 
   // Keep a raw byte pointer to ease indirection through pinfo.
@@ -511,7 +513,7 @@ bool ETWConsumer::SendRawPayloadField(PEVENT_RECORD pevent,
   // Retrieve field name.
   assert(field.NameOffset != 0);
   size_t name_offset = field.NameOffset;
-  LPWSTR name_ptr = (LPWSTR)(&raw_info[name_offset]);
+  LPWSTR name_ptr = reinterpret_cast<LPWSTR>(&raw_info[name_offset]);
   std::string field_name = ConvertString(name_ptr);
 
   // Create a scope for the structure.
@@ -560,71 +562,121 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
   // Retrieve field name.
   assert(field.NameOffset != 0);
   size_t name_offset = field.NameOffset;
-  LPWSTR name_ptr = (LPWSTR)(&raw_info[name_offset]);
+  LPWSTR name_ptr = reinterpret_cast<LPWSTR>(&raw_info[name_offset]);
   std::string field_name = ConvertString(name_ptr);
 
-  // TODO(bergeret): Handle aggregate types (struct, array, ...).
+  // Contains the field information.
+  Metadata::Field merged_field;
+
+  // TODO(bergeret): Handle aggregate types (struct, ...).
   if (flags != 0) {
     std::cout << "Skip flags:" << flags << std::endl;
     return false;
   }
 
-  if (count != 1) {
-    std::cout << "Skip count:" << count << std::endl;
-    return false;
+  // Assume not empty.
+  assert(count >= 1);
+  if (count > 1) {
+    descr->AddField(Metadata::Field(Metadata::Field::ARRAY_FIXED,
+                                    field_name,
+                                    count,
+                                    parent));
+    parent = descr->size() - 1;
   }
 
-  // Not an aggregate type.
-  unsigned int in_type = field.nonStructType.InType;
-  unsigned int out_type = field.nonStructType.OutType;
+  // Decode each element of the array.
+  for (size_t element = 0; element < count; ++element) {
+    // Descriptor used to fetch properties information. Size 2 is
+    // needed to fetch length of aggregate types.
+    PROPERTY_DATA_DESCRIPTOR data_descriptors[2];
+    unsigned int descriptor_count = 0;
 
-  // Descriptor used to fetch properties information. Size 2 is
-  // needed to fetch length of aggregate types.
-  PROPERTY_DATA_DESCRIPTOR data_descriptors[2];
-  unsigned int descriptor_count = 0;
+    PBYTE name_ptr = reinterpret_cast<PBYTE>(pinfo) + field.NameOffset;
+    data_descriptors[0].PropertyName = reinterpret_cast<ULONGLONG>(name_ptr);
 
-  data_descriptors[0].PropertyName =
-      (ULONGLONG)((PBYTE)(pinfo) + field.NameOffset);
-  data_descriptors[0].ArrayIndex = 0;
-  descriptor_count = 1;
+    data_descriptors[0].ArrayIndex = element;
+    descriptor_count = 1;
 
-  // Determine the property size.
-  ULONG property_size = 0;
-  ULONG status = TdhGetPropertySize(pevent, 0, NULL, descriptor_count,
-      &data_descriptors[0], &property_size);
-  if (status != ERROR_SUCCESS)
-    return false;
+    // Determine the property size.
+    ULONG property_size = 0;
+    ULONG status = TdhGetPropertySize(pevent, 0, NULL, descriptor_count,
+                                      &data_descriptors[0], &property_size);
+    if (status != ERROR_SUCCESS)
+      return false;
 
-  // Get a pointer to a buffer large enough to hold the property.
-  if (property_size >= data_property_buffer_.size())
-    data_property_buffer_.resize(property_size);
-  ::memset(&data_property_buffer_[0], 0, data_property_buffer_.size());
-  PBYTE raw_data = reinterpret_cast<PBYTE>(&data_property_buffer_[0]);
+    // Get a pointer to a buffer large enough to hold the property.
+    if (property_size > data_property_buffer_.size())
+      data_property_buffer_.resize(property_size);
+    ::memset(&data_property_buffer_[0], 0, data_property_buffer_.size());
+    PBYTE raw_data = reinterpret_cast<PBYTE>(&data_property_buffer_[0]);
+    
+    // Retrieve the property.
+    status = TdhGetProperty(pevent, 0, NULL, descriptor_count,
+                            &data_descriptors[0], property_size, raw_data);
+    if (status != ERROR_SUCCESS)
+      return false;
 
-  // Retrieve the property.
-  status = TdhGetProperty(pevent, 0, NULL, descriptor_count,
-     &data_descriptors[0], property_size, raw_data);
-  if (status != ERROR_SUCCESS)
-    return false;
+    unsigned int in_type = field.nonStructType.InType;
+    unsigned int out_type = field.nonStructType.OutType;
 
-  // TODO(bergeret): This is too big. Figure out the way to handle aggregate
-  //     types and split this function.
+    // Decode the current field and append encoded value to the packet.
+    Metadata::Field current_field;
+    bool valid = DecodePayloadField(parent, field_name, in_type, out_type,
+                                    property_size, raw_data, &current_field,
+                                    packet);
+    if (!valid)
+      return false;
+
+    // Validate that all elements in the array are compatible.
+    if (element == 0) {
+      merged_field = current_field;
+      descr->AddField(merged_field);
+    } else if (merged_field != current_field) {
+      // Error when not the first elements and elements differ.
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool ETWConsumer::DecodePayloadField(size_t parent,
+                                     const std::string& field_name,
+                                     unsigned int in_type,
+                                     unsigned int out_type,
+                                     unsigned int property_size,
+                                     void *raw_data,
+                                     Metadata::Field* field,
+                                     Metadata::Packet* packet) {
+  assert(field != NULL);
+  assert(packet != NULL);
+  assert(!field_name.empty());
+  assert(property_size != 0);
+
   // Try to decode the property with in/out type.
   Metadata::Field::FieldType field_type = Metadata::Field::INVALID;
   switch (in_type) {
     case TDH_INTYPE_UNICODESTRING:
       packet->EncodeString(ConvertString((LPWSTR)raw_data));
       // TODO(bergeret): We should keep unicode.
-      descr->AddField(
-          Metadata::Field(Metadata::Field::STRING, field_name, parent));
+      *field = Metadata::Field(Metadata::Field::STRING, field_name, parent);
       return true;
 
     case TDH_INTYPE_ANSISTRING:
       packet->EncodeString((const char*)raw_data);
-      descr->AddField(
-          Metadata::Field(Metadata::Field::STRING, field_name, parent));
+      *field = Metadata::Field(Metadata::Field::STRING, field_name, parent);
       return true;
 
+    case TDH_INTYPE_UNICODECHAR:
+      if (property_size == 2) {
+        field_type = Metadata::Field::XINT16;
+        packet->EncodeUInt16(*reinterpret_cast<uint16_t*>(raw_data));
+        *field = Metadata::Field(field_type, field_name, parent);
+        return true;
+      }
+      break;
+
+    case TDH_INTYPE_ANSICHAR:
     case TDH_INTYPE_INT8:
     case TDH_INTYPE_UINT8:
       switch (out_type) {
@@ -648,7 +700,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 1) {
         packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name, parent));
+        *field = Metadata::Field(field_type, field_name, parent);
         return true;
       }
       break;
@@ -676,7 +728,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 2) {
         packet->EncodeUInt16(*reinterpret_cast<uint16_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name, parent));
+        *field = Metadata::Field(field_type, field_name, parent);
         return true;
       }
       break;
@@ -704,7 +756,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 4) {
         packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name, parent));
+        *field = Metadata::Field(field_type, field_name, parent);
         return true;
       }
       break;
@@ -726,7 +778,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
 
       if (property_size == 8) {
         packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr->AddField(Metadata::Field(field_type, field_name, parent));
+        *field = Metadata::Field(field_type, field_name, parent);
         return true;
       }
       break;
@@ -734,22 +786,19 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
     case TDH_INTYPE_BOOLEAN:
       if (property_size == 1) {
         packet->EncodeUInt8(*reinterpret_cast<uint8_t*>(raw_data) != 0);
-        descr->AddField(
-            Metadata::Field(Metadata::Field::UINT8, field_name, parent));
+        *field = Metadata::Field(Metadata::Field::UINT8, field_name, parent);
         return true;
       } else if (property_size == 4) {
         packet->EncodeUInt8(*reinterpret_cast<uint32_t*>(raw_data) != 0);
-        descr->AddField(
-            Metadata::Field(Metadata::Field::UINT8, field_name, parent));
+        *field = Metadata::Field(Metadata::Field::UINT8, field_name, parent);
         return true;
       }
       break;
 
     case TDH_INTYPE_GUID:
       if (property_size == 16) {
-        packet->EncodeBytes(raw_data, 16);
-        descr->AddField(
-            Metadata::Field(Metadata::Field::GUID, field_name, parent));
+        packet->EncodeBytes(reinterpret_cast<uint8_t*>(raw_data), 16);
+        *field = Metadata::Field(Metadata::Field::GUID, field_name, parent);
         return true;
       }
       break;
@@ -758,13 +807,11 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
     case TDH_INTYPE_SIZET:
       if (property_size == 4) {
         packet->EncodeUInt32(*reinterpret_cast<uint32_t*>(raw_data));
-        descr->AddField(
-            Metadata::Field(Metadata::Field::XINT32, field_name, parent));
+        *field = Metadata::Field(Metadata::Field::XINT32, field_name, parent);
         return true;
       } else if (property_size == 8) {
         packet->EncodeUInt64(*reinterpret_cast<uint64_t*>(raw_data));
-        descr->AddField(
-            Metadata::Field(Metadata::Field::XINT64, field_name, parent));
+        *field = Metadata::Field(Metadata::Field::XINT64, field_name, parent);
         return true;
       }
       break;
@@ -976,6 +1023,10 @@ bool ETWConsumer::SerializeMetadataField(const Metadata::Event& descr,
 
   // Dispatch the field type.
   switch (field.type()) {
+  case Metadata::Field::ARRAY_FIXED:
+  case Metadata::Field::ARRAY_VAR:
+    return true;
+
   case Metadata::Field::STRUCT_BEGIN:
     *out << "    struct  {\n";
     return true;
@@ -1034,6 +1085,18 @@ bool ETWConsumer::SerializeMetadataField(const Metadata::Event& descr,
     break;
   default:
     return false;
+  }
+
+  // Output the aggregate declaration suffix.
+  for (size_t p = field.parent(); p != kRootScope; p = descr.at(p).parent()) {
+    const Metadata::Field& parent = descr.at(p);
+    if (parent.type() == Metadata::Field::ARRAY_FIXED) {
+      *out << "[" << parent.size() << "]";
+    } else if (parent.type() == Metadata::Field::ARRAY_VAR) {
+      *out << "[" << parent.field_size() << "]";
+    } else {
+      break;
+    }
   }
 
   // End of declaration.

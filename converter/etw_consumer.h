@@ -127,14 +127,19 @@ class ETWConsumer {
   void BuildFullPacket(Metadata::Packet* packet);
 
  private:
-  bool DecodePayload(
-      PEVENT_RECORD pevent, Metadata::Packet* packet, Metadata::Event* descr);
-  bool SendRawPayload(
-      PEVENT_RECORD pevent, Metadata::Packet* packet, Metadata::Event* descr);
+  bool DecodePayload(PEVENT_RECORD pevent, Metadata::Packet* packet,
+                     Metadata::Event* descr);
+  bool SendRawPayload(PEVENT_RECORD pevent, Metadata::Packet* packet,
+                      Metadata::Event* descr);
 
   bool DecodePayloadField(PEVENT_RECORD pevent, PTRACE_EVENT_INFO pinfo,
-      size_t parent, unsigned int field, Metadata::Packet* packet,
-      Metadata::Event* descr);
+                          size_t parent, unsigned int field,
+                          Metadata::Packet* packet, Metadata::Event* descr);
+
+  bool DecodePayloadField(size_t parent, const std::string& field_name,
+                          unsigned int in_type, unsigned int out_type,
+                          unsigned int property_size, void* raw_data,
+                          Metadata::Field* field, Metadata::Packet* packet);
 
   bool SendRawPayloadField(PEVENT_RECORD pevent,
                            PTRACE_EVENT_INFO pinfo,
