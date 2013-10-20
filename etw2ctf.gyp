@@ -40,8 +40,11 @@
         },
       },
       'sources': [
+        # TODO(fdoray): Use .cc extension instead of .cpp.
         'main.cpp',
         'base/disallow_copy_and_assign.h',
+        'base/scoped_handle.cc',
+        'base/scoped_handle.h',
         'converter/ctf_producer.cpp',
         'converter/ctf_producer.h',
         'converter/etw_consumer.cpp',
