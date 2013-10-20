@@ -41,6 +41,7 @@
       },
       'sources': [
         'main.cpp',
+        'base/disallow_copy_and_assign.h',
         'converter/ctf_producer.cpp',
         'converter/ctf_producer.h',
         'converter/etw_consumer.cpp',

@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "converter/metadata.h"
+#include "base/disallow_copy_and_assign.h"
 
 namespace converter {
 
@@ -191,6 +192,8 @@ class ETWConsumer {
   // Temporary buffer used to hold raw data produced by the ETW API.
   std::vector<char> data_property_buffer_;
   std::vector<char> packet_info_buffer_;
+
+  DISALLOW_COPY_AND_ASSIGN(ETWConsumer);
 };
 
 }  // namespace converter

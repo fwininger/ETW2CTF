@@ -37,6 +37,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "base/disallow_copy_and_assign.h"
+
 namespace converter {
 
 // This class implements a dictionary of event layouts. Each event encoded in
@@ -44,6 +46,8 @@ namespace converter {
 // description in this dictionary.
 class Metadata {
  public:
+  Metadata() {}
+
   // Forward declaration.
   class Event;
   class Field;
@@ -70,6 +74,8 @@ class Metadata {
   // Dictionary of event definitions.
   // The event id is the offset in this vector.
   std::vector<Event> events_;
+
+  DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
 // This class contains the information layout for an event.

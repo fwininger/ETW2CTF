@@ -36,6 +36,8 @@
 #include <fstream>
 #include <vector>
 
+#include "base/disallow_copy_and_assign.h"
+
 namespace converter {
 
 // This class implements the CTF stream management.
@@ -54,6 +56,8 @@ namespace converter {
 //
 class CTFProducer {
  public:
+  CTFProducer() {}
+
   // Forward declaration.
   class Packet;
 
@@ -85,6 +89,8 @@ class CTFProducer {
 
   // The active output stream.
   std::ofstream stream_;
+
+  DISALLOW_COPY_AND_ASSIGN(CTFProducer);
 };
 
 }  // namespace converter
