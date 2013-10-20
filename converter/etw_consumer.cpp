@@ -443,6 +443,9 @@ bool ETWConsumer::DecodePayload(
   if (status != ERROR_SUCCESS)
     return false;
 
+  // Notify the observers that the event information has been extracted.
+  FOR_EACH_ETW_OBSERVER(OnExtractEventInfo(this, pevent, pinfo));
+
   // Filter the decoding source we don't know how to handle.
   if (pinfo->DecodingSource != DecodingSourceWbem &&
       pinfo->DecodingSource != DecodingSourceXMLFile) {

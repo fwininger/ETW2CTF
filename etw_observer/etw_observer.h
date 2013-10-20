@@ -45,6 +45,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>  // NOLINT
 #include <evntcons.h>
+#include <tdh.h>
 #include <string>
 
 namespace converter {
@@ -61,8 +62,17 @@ class ETWObserver {
   // Called when an ETW consumer starts processing an event.
   // @param consumer the observed consumer.
   // @param pevent the ETW event that is processed.
-  virtual void OnBeginProcessEvent(converter::ETWConsumer* consumer,
-                                   PEVENT_RECORD pevent) {}
+  virtual void OnBeginProcessEvent(converter::ETWConsumer* /* consumer */,
+                                   PEVENT_RECORD /* pevent */) {}
+
+  // Called when TRACE_EVENT_INFO is extracted from an event. Is only called
+  // between calls to OnBeginProcessEvent() and OnEndProcessEvent().
+  // @param consumer the observed consumer.
+  // @param pevent the ETW event that is processed.
+  // @param pinfo information about the event.
+  virtual void OnExtractEventInfo(converter::ETWConsumer* /* consumer */,
+                                  PEVENT_RECORD /* pevent */,
+                                  PTRACE_EVENT_INFO /* pinfo */) {}
 
   // Called when a payload field is decoded. Is only called between calls to
   // OnBeginProcessEvent() and OnEndProcessEvent().
@@ -75,20 +85,20 @@ class ETWObserver {
   // @param out_type data type of the field on output.
   // @param property_size size of the field, in bytes.
   // @param raw_data pointer to the raw data of the field.
-  virtual void OnDecodePayloadField(converter::ETWConsumer* consumer,
-                                    size_t parent,
-                                    size_t array_offset,
-                                    const std::string& field_name,
-                                    unsigned int in_type,
-                                    unsigned int out_type,
-                                    ULONG property_size,
-                                    void* raw_data) {}
+  virtual void OnDecodePayloadField(converter::ETWConsumer* /* consumer */,
+                                    size_t /* parent */,
+                                    size_t /* array_offset */,
+                                    const std::string& /* field_name */,
+                                    unsigned int /* in_type */,
+                                    unsigned int /* out_type */,
+                                    ULONG /*property_size */,
+                                    void* /* raw_data */) {}
 
   // Called when an ETW consumer finishes to process an event.
   // @param consumer the observed consumer.
   // @param pevent the ETW event that is processed.
-  virtual void OnEndProcessEvent(converter::ETWConsumer* consumer,
-                                 PEVENT_RECORD pevent) {}
+  virtual void OnEndProcessEvent(converter::ETWConsumer* /* consumer */,
+                                 PEVENT_RECORD /* pevent */) {}
 
   // @returns the next registered observer.
   ETWObserver* next() { return next_; }
