@@ -167,6 +167,7 @@ void ETWConsumer::AddPacketToSendingQueue(const Metadata::Packet& packet) {
 
 void ETWConsumer::PopPacketFromSendingQueue() {
   assert(!packets_.empty());
+  assert(packet_total_bytes_ >= packets_.front().size());
   packet_total_bytes_ -= packets_.front().size();
   packets_.pop_front();
 }
@@ -279,6 +280,8 @@ bool ETWConsumer::ProcessBuffer(PEVENT_TRACE_LOGFILEW ptrace) {
 }
 
 bool ETWConsumer::ProcessEvent(PEVENT_RECORD pevent) {
+  assert(pevent != NULL);
+
   FOR_EACH_ETW_OBSERVER(OnBeginProcessEvent(this, pevent));
   bool res = ProcessEventInternal(pevent);
   FOR_EACH_ETW_OBSERVER(OnEndProcessEvent(this, pevent));

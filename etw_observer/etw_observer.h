@@ -101,7 +101,7 @@ class ETWObserver {
                                  PEVENT_RECORD /* pevent */) {}
 
   // @returns the next registered observer.
-  ETWObserver* next() { return next_; }
+  ETWObserver* next() const { return next_; }
 
  private:
   // Anchor for a linked list of observers.

@@ -25,6 +25,8 @@
 
 #include "dissector/dissectors.h"
 
+#include <cassert>
+
 namespace dissector {
 
 // Head of a linked list of registered dissectors.
@@ -32,6 +34,9 @@ static Dissector* dissectors = NULL;
 
 Dissector::Dissector(const char *name, const char *descr)
     : name_(name), descr_(descr), next_(NULL) {
+  assert(name != NULL);
+  assert(descr != NULL);
+
   // Register the dissector in the global linked list.
   this->next_ = dissectors;
   dissectors = this;
@@ -43,6 +48,9 @@ bool DecodePayloadWithDissectors(const GUID& guid,
                                  uint32_t length,
                                  converter::Metadata::Packet* packet,
                                  converter::Metadata::Event* descr) {
+  assert(packet != NULL);
+  assert(descr != NULL);
+
   Dissector* it = dissectors;
   size_t payload_position = packet->size();
 

@@ -67,7 +67,7 @@ class Dissector {
                              converter::Metadata::Packet* packet,
                              converter::Metadata::Event* descr) = 0;
 
-  Dissector* next() { return next_; }
+  Dissector* next() const { return next_; }
 
  private:
   // The name of the plugin.
