@@ -35,8 +35,16 @@
         'VCLinkerTool': {
           'AdditionalDependencies': [
             'advapi32.lib',
+            'dbghelp.lib',
             'tdh.lib',
-          ]
+          ],
+          'DelayLoadDLLs': [
+            # Delay loading dbghelp.dll so that the library installed with
+            # Windows Performance Toolkit can be loaded programmatically instead
+            # of the default one. This is important because the default library
+            # cannot communicate with a symbol server.
+            'dbghelp.dll',
+          ],
         },
       },
       'sources': [
@@ -55,6 +63,8 @@
         'dissector/dissectors.h',
         'etw_observer/etw_observer.cpp',
         'etw_observer/etw_observer.h',
+        'sym_util/load_dbghelp.cc',
+        'sym_util/load_dbghelp.h',
       ],
     },
   ]
