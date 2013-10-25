@@ -63,8 +63,12 @@
         'dissector/dissectors.h',
         'etw_observer/etw_observer.cpp',
         'etw_observer/etw_observer.h',
+        'sym_util/image.cc',
+        'sym_util/image.h',
         'sym_util/load_dbghelp.cc',
         'sym_util/load_dbghelp.h',
+        'sym_util/symbol_lookup_service.cc',
+        'sym_util/symbol_lookup_service.h',
       ],
     },
   ]
