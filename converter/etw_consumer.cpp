@@ -221,6 +221,81 @@ void ETWConsumer::BuildFullPacket(Metadata::Packet* output) {
                      start_timestamp, stop_timestamp, output);
 }
 
+void ETWConsumer::EncodeGeneratedEventHeader(uint64_t timestamp,
+                                             unsigned char opcode,
+                                             unsigned char version,
+                                             const GUID& provider_id,
+                                             Metadata::Packet* packet) {
+  assert(packet != NULL);
+
+  // Fill a "fake" ETW event header and send it through the usual header
+  // encoding function.
+  EVENT_HEADER header;
+  ::memset(&header, 0, sizeof(EVENT_HEADER));
+
+  header.TimeStamp.QuadPart = timestamp;
+  header.EventDescriptor.Version = version;
+  header.EventDescriptor.Opcode = opcode;
+  header.ProviderId = provider_id;
+
+  ETW_BUFFER_CONTEXT buffer_context;
+  ::memset(&buffer_context, 0, sizeof(ETW_BUFFER_CONTEXT));
+
+  EncodeEventHeader(header, buffer_context, packet);
+}
+
+void ETWConsumer::EncodeEventHeader(const EVENT_HEADER& header,
+                                    const ETW_BUFFER_CONTEXT& buffer_context,
+                                    Metadata::Packet* packet) {
+  assert(packet != NULL);
+
+  // Output stream.header.timestamp.
+  uint64_t timestamp = header.TimeStamp.QuadPart;
+  packet->set_timestamp(timestamp);
+  packet->EncodeUInt64(timestamp);
+
+  // Output stream.header.id, and keep track of the current position to update
+  // it later when the payload is fully decoded and can be bound to a valid
+  // unique event id.
+  packet->set_event_id_offset(packet->size());
+  size_t event_id = 0;
+  packet->EncodeUInt32(event_id);
+
+  // Output stream.context.ev_*.
+  packet->EncodeUInt16(header.EventDescriptor.Id);
+  packet->EncodeUInt8(header.EventDescriptor.Version);
+  packet->EncodeUInt8(header.EventDescriptor.Channel);
+  packet->EncodeUInt8(header.EventDescriptor.Level);
+  packet->EncodeUInt8(header.EventDescriptor.Opcode);
+  packet->EncodeUInt16(header.EventDescriptor.Task);
+  packet->EncodeUInt64(header.EventDescriptor.Keyword);
+
+  // Output stream.context.pid/tid/cpu_id.
+  packet->EncodeUInt32(header.ProcessId);
+  packet->EncodeUInt32(header.ThreadId);
+  packet->EncodeUInt8(buffer_context.ProcessorNumber);
+  packet->EncodeUInt16(buffer_context.LoggerId);
+
+  // Output stream.context.uuid.
+  EncodeGUID(header.ProviderId, packet);
+  EncodeGUID(header.ActivityId, packet);
+
+  // Output stream.context.header_type.
+  packet->EncodeUInt16(header.HeaderType);
+
+  // Output stream.context.header_flags.
+  packet->EncodeUInt16(header.Flags);
+  packet->EncodeUInt16(header.Flags);
+
+  // Output stream.context.header_properties.
+  packet->EncodeUInt16(header.EventProperty);
+  packet->EncodeUInt16(header.EventProperty);
+
+  // Output cpu_id.
+  // TODO(fdoray): Remove this.
+  packet->EncodeUInt8(buffer_context.ProcessorNumber);
+}
+
 void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet) {
   assert(packet != NULL);
 
@@ -295,51 +370,7 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   }
 
   Metadata::Packet packet;
-
-  // Output stream.header.timestamp.
-  uint64_t timestamp = pevent->EventHeader.TimeStamp.QuadPart;
-  packet.set_timestamp(timestamp);
-  packet.EncodeUInt64(timestamp);
-
-  // Output stream.header.id, and keep track of the current position to update
-  // it later when the payload is fully decoded and can be bound to a valid
-  // unique event id.
-  packet.set_event_id_offset(packet.size());
-  size_t event_id = 0;
-  packet.EncodeUInt32(event_id);
-
-  // Output stream.context.ev_*.
-  packet.EncodeUInt16(pevent->EventHeader.EventDescriptor.Id);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Version);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Channel);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Level);
-  packet.EncodeUInt8(pevent->EventHeader.EventDescriptor.Opcode);
-  packet.EncodeUInt16(pevent->EventHeader.EventDescriptor.Task);
-  packet.EncodeUInt64(pevent->EventHeader.EventDescriptor.Keyword);
-
-  // Output stream.context.pid/tid/cpu_id.
-  packet.EncodeUInt32(pevent->EventHeader.ProcessId);
-  packet.EncodeUInt32(pevent->EventHeader.ThreadId);
-  packet.EncodeUInt8(pevent->BufferContext.ProcessorNumber);
-  packet.EncodeUInt16(pevent->BufferContext.LoggerId);
-
-  // Output stream.context.uuid.
-  EncodeGUID(pevent->EventHeader.ProviderId, &packet);
-  EncodeGUID(pevent->EventHeader.ActivityId, &packet);
-
-  // Output stream.context.header_type.
-  packet.EncodeUInt16(pevent->EventHeader.HeaderType);
-
-  // Output stream.context.header_flags.
-  packet.EncodeUInt16(pevent->EventHeader.Flags);
-  packet.EncodeUInt16(pevent->EventHeader.Flags);
-
-  // Output stream.context.header_properties.
-  packet.EncodeUInt16(pevent->EventHeader.EventProperty);
-  packet.EncodeUInt16(pevent->EventHeader.EventProperty);
-
-  // Output cpu_id.
-  packet.EncodeUInt8(pevent->BufferContext.ProcessorNumber);
+  EncodeEventHeader(pevent->EventHeader, pevent->BufferContext, &packet);
 
   // Decode the packet payload.
   Metadata::Event descr;
@@ -366,7 +397,7 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   }
 
   // Update the event_id, now we have the full layout information.
-  event_id = metadata_.GetIdForEvent(descr);
+  size_t event_id = metadata_.GetIdForEvent(descr);
   packet.UpdateUInt32(packet.event_id_offset(), event_id);
 
   // Add this packet to the sending queue.

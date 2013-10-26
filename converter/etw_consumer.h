@@ -127,7 +127,23 @@ class ETWConsumer {
   // @param packet Receives the full packet.
   void BuildFullPacket(Metadata::Packet* packet);
 
+  // Encode the header of a generated event.
+  // @param timestamp timestamp of the generated event.
+  // @param opcode opcode of the generated event.
+  // @param version version of the generated event.
+  // @param provider_id GUID of the provider that generates the event.
+  // @param packet packet in which the header is encoded.
+  static void EncodeGeneratedEventHeader(uint64_t timestamp,
+                                         unsigned char opcode,
+                                         unsigned char version,
+                                         const GUID& provider_id,
+                                         Metadata::Packet* packet);
+
  private:
+  static void EncodeEventHeader(const EVENT_HEADER& header,
+                                const ETW_BUFFER_CONTEXT& buffer_context,
+                                Metadata::Packet* packet);
+
   bool ProcessEventInternal(PEVENT_RECORD pevent);
 
   bool DecodePayload(PEVENT_RECORD pevent, Metadata::Packet* packet,
