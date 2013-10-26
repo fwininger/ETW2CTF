@@ -177,9 +177,7 @@ void ETWConsumer::BuildFullPacket(Metadata::Packet* output) {
   assert(packet_total_bytes_ != 0);
 
   // Encode and Write stream header.
-  size_t packet_context_offset = 0;
-  EncodePacketHeader(output, &packet_context_offset);
-  assert(packet_context_offset != 0);
+  EncodePacketHeader(output);
 
   unsigned int packet_count = 0;
   uint64_t start_timestamp = UINT64_MAX;
@@ -219,14 +217,12 @@ void ETWConsumer::BuildFullPacket(Metadata::Packet* output) {
   uint32_t packet_size = output->size();
 
   // Update the output packet header.
-  UpdatePacketHeader(packet_context_offset, content_size, packet_size,
+  UpdatePacketHeader(content_size, packet_size,
                      start_timestamp, stop_timestamp, output);
 }
 
-void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet,
-                                     size_t* packet_context_offset) {
+void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet) {
   assert(packet != NULL);
-  assert(packet_context_offset != NULL);
 
   const uint32_t kCtfMagicNumber = 0xC1FC1FC1;
 
@@ -236,8 +232,8 @@ void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet,
   // Output trace.header.uuid.
   EncodeGUID(ETWConverterGuid, packet);
 
-  // Returns the offset where context values will be updated.
-  *packet_context_offset = packet->size();
+  // Keep track of the packet context offset.
+  packet->set_packet_context_offset(packet->size());
 
   // Output trace.header.content_size.
   packet->EncodeUInt32(0);
@@ -249,13 +245,14 @@ void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet,
   packet->EncodeUInt64(0);
 }
 
-void ETWConsumer::UpdatePacketHeader(size_t packet_context_offset,
-                                     uint32_t content_size,
+void ETWConsumer::UpdatePacketHeader(uint32_t content_size,
                                      uint32_t packet_size,
                                      uint64_t start_timestamp,
                                      uint64_t stop_timestamp,
                                      Metadata::Packet* packet) {
   assert(packet != NULL);
+
+  size_t packet_context_offset = packet->packet_context_offset();
 
   // content_size is encoded in bits.
   packet->UpdateUInt32(packet_context_offset, content_size * 8);
@@ -307,8 +304,8 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   // Output stream.header.id, and keep track of the current position to update
   // it later when the payload is fully decoded and can be bound to a valid
   // unique event id.
+  packet.set_event_id_offset(packet.size());
   size_t event_id = 0;
-  size_t event_id_position = packet.size();
   packet.EncodeUInt32(event_id);
 
   // Output stream.context.ev_*.
@@ -370,7 +367,7 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
 
   // Update the event_id, now we have the full layout information.
   event_id = metadata_.GetIdForEvent(descr);
-  packet.UpdateUInt32(event_id_position, event_id);
+  packet.UpdateUInt32(packet.event_id_offset(), event_id);
 
   // Add this packet to the sending queue.
   AddPacketToSendingQueue(packet);

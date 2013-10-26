@@ -238,6 +238,7 @@ class Metadata::Field {
 // the corresponding description in the Metadata dictionary.
 class Metadata::Packet {
  public:
+  Packet();
 
   // @returns the timestamp of this packet.
   uint64_t timestamp() const;
@@ -245,6 +246,22 @@ class Metadata::Packet {
   // Set the timestamp of this packet.
   // @param time the timestamp this packet.
   void set_timestamp(uint64_t time);
+
+  // @returns the offset of the event id field.
+  size_t event_id_offset() { return event_id_offset_; }
+
+  // Set the offset of the event id field.
+  // @param offset the offset of the event id field.
+  void set_event_id_offset(size_t offset) { event_id_offset_ = offset; }
+
+  // @returns the offset of the packet context.
+  size_t packet_context_offset() { return packet_context_offset_; }
+
+  // Set the offset of the packet context.
+  // @param offset the offset of the packet context.
+  void set_packet_context_offset(size_t offset) {
+    packet_context_offset_ = offset;
+  }
 
   // @returns a pointer to the raw bytes encoded in this packet.
   const uint8_t* raw_bytes() const;
@@ -297,6 +314,12 @@ class Metadata::Packet {
 
   // Timestamp of this packet.
   uint64_t timestamp_;
+
+  // Offset of the event id field.
+  size_t event_id_offset_;
+
+  // Offset of the packet context.
+  size_t packet_context_offset_;
 };
 
 }  // namespace converter

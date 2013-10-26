@@ -158,10 +158,8 @@ class ETWConsumer {
                               const Metadata::Field& field,
                               std::stringstream* out) const;
 
-  void EncodePacketHeader(Metadata::Packet* packet,
-                          size_t* packet_context_offset);
-  void UpdatePacketHeader(size_t packet_context_offset,
-                          uint32_t content_size,
+  void EncodePacketHeader(Metadata::Packet* packet);
+  void UpdatePacketHeader(uint32_t content_size,
                           uint32_t packet_size,
                           uint64_t start_timestamp,
                           uint64_t stop_timestamp,

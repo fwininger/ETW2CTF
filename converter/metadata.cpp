@@ -76,6 +76,11 @@ void Metadata::Event::AddField(const Field& field) {
   fields_.push_back(field);
 }
 
+Metadata::Packet::Packet()
+    : timestamp_(0),
+      event_id_offset_(0),
+      packet_context_offset_(0) {}
+
 uint64_t Metadata::Packet::timestamp() const {
   return timestamp_;
 }
