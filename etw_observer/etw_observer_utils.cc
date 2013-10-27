@@ -23,39 +23,44 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef SYM_UTIL_IMAGE_H_
-#define SYM_UTIL_IMAGE_H_
+#include "etw_observer/etw_observer_utils.h"
 
-#include <cstdint>
-#include <string>
+#include <tdh.h>
 
-namespace sym_util {
+namespace etw_observer {
 
-// Information about an image loaded in memory.
-struct Image {
-  Image();
-  bool operator<(const Image& image) const;
+bool CaptureUint32(unsigned int in_type, ULONG property_size, void* raw_data,
+                   uint32_t* out) {
+  if (in_type != TDH_INTYPE_UINT32 &&
+      !(in_type == TDH_INTYPE_POINTER && property_size == 4)) {
+    return false;
+  }
+  *out = *reinterpret_cast<uint32_t*>(raw_data);
+  return true;
+}
 
-  // Reset all the fields of the structure. Base address, size, checksum
-  // and timestamp become 0. File name becomes an empty string.
-  void Reset();
+bool CaptureUint64(unsigned int in_type, ULONG property_size, void* raw_data,
+                   uint64_t* out) {
+  if (in_type != TDH_INTYPE_UINT64 &&
+      !(in_type == TDH_INTYPE_POINTER && property_size == 8)) {
+    return false;
+  }
+  *out = *reinterpret_cast<uint64_t*>(raw_data);
+  return true;
+}
 
-  // Base address of the image in memory.
-  uint64_t base_address;
+bool CaptureLong(unsigned int in_type, ULONG property_size, void* raw_data,
+                 uint64_t* out) {
+  if (CaptureUint64(in_type, property_size, raw_data, out))
+    return true;
 
-  // Image size.
-  uint64_t size;
+  uint32_t out_uint32 = 0;
+  if (CaptureUint32(in_type, property_size, raw_data, &out_uint32)) {
+    *out = out_uint32;
+    return true;
+  }
 
-  // Image checksum.
-  uint32_t checksum;
+  return false;
+}
 
-  // Image timestamp.
-  uint32_t timestamp;
-
-  // Full path of the image file, from the kernel point of view.
-  std::wstring filename;
-};
-
-}  // namespace sym_util
-
-#endif  // SYM_UTIL_IMAGE_H_
+}  // namespace etw_observer

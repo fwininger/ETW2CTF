@@ -127,6 +127,17 @@ class ETWConsumer {
   // @param packet Receives the full packet.
   void BuildFullPacket(Metadata::Packet* packet);
 
+  // Update the event id of a packet. Must be called before adding the
+  // packet to the sending queue.
+  // @param descr the description of the packet.
+  // @param packet the packet to finalize.
+  void FinalizePacket(const Metadata::Event& descr,
+                      Metadata::Packet* packet);
+
+  // Add a packet to the sending queue.
+  // @param packet the packet to add to the sending queue.
+  void AddPacketToSendingQueue(const Metadata::Packet& packet);
+
   // Encode the header of a generated event.
   // @param timestamp timestamp of the generated event.
   // @param opcode opcode of the generated event.
@@ -181,7 +192,6 @@ class ETWConsumer {
                           uint64_t stop_timestamp,
                           Metadata::Packet* packet);
 
-  void AddPacketToSendingQueue(const Metadata::Packet& packet);
   void PopPacketFromSendingQueue();
 
   // Trace files to consume.

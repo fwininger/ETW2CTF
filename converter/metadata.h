@@ -248,14 +248,14 @@ class Metadata::Packet {
   void set_timestamp(uint64_t time);
 
   // @returns the offset of the event id field.
-  size_t event_id_offset() { return event_id_offset_; }
+  size_t event_id_offset() const { return event_id_offset_; }
 
   // Set the offset of the event id field.
   // @param offset the offset of the event id field.
   void set_event_id_offset(size_t offset) { event_id_offset_ = offset; }
 
   // @returns the offset of the packet context.
-  size_t packet_context_offset() { return packet_context_offset_; }
+  size_t packet_context_offset() const { return packet_context_offset_; }
 
   // Set the offset of the packet context.
   // @param offset the offset of the packet context.

@@ -59,4 +59,12 @@ bool Image::operator<(const Image& image) const {
   return filename < image.filename;
 }
 
+void Image::Reset() {
+  base_address = 0;
+  size = 0;
+  checksum = 0;
+  timestamp = 0;
+  filename = std::wstring();
+}
+
 }  // namespace sym_util

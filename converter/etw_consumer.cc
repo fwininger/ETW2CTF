@@ -159,8 +159,23 @@ bool ETWConsumer::IsSendingQueueEmpty() {
   return packet_total_bytes_ == 0;
 }
 
+void ETWConsumer::FinalizePacket(const Metadata::Event& descr,
+                                 Metadata::Packet* packet) {
+  assert(packet != NULL);
+  assert(packet->event_id_offset() > 0);
+  size_t event_id = metadata_.GetIdForEvent(descr);
+  packet->UpdateUInt32(packet->event_id_offset(), event_id);
+}
+
 void ETWConsumer::AddPacketToSendingQueue(const Metadata::Packet& packet) {
-  assert(packet.size() > 0);
+  assert(packet.event_id_offset() > 0);
+  assert(packet.size() > packet.event_id_offset());
+
+  // Check whether the event id has been updated by fetching it from the packet.
+  assert(
+      *reinterpret_cast<uint32_t*>(packet.raw_bytes()[packet.event_id_offset()])
+      != 0);
+
   packet_total_bytes_ += packet.size();
   packets_.push_back(packet);
 }
@@ -393,8 +408,7 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   }
 
   // Update the event_id, now we have the full layout information.
-  size_t event_id = metadata_.GetIdForEvent(descr);
-  packet.UpdateUInt32(packet.event_id_offset(), event_id);
+  FinalizePacket(descr, &packet);
 
   // Add this packet to the sending queue.
   AddPacketToSendingQueue(packet);
