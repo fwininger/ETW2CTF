@@ -26,7 +26,7 @@
 #ifndef BASE_COMPILER_SPECIFIC_H_
 #define BASE_COMPILER_SPECIFIC_H_
 
-// Macro to annotate methods that are overridding virtual methods from a base
+// Macro to annotate methods that are overriding virtual methods from a base
 // class.
 // Sample use:
 //     virtual void foo() OVERRIDE;

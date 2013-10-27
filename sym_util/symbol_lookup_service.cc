@@ -23,14 +23,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "base/scoped_handle.h"
-#include "sym_util/load_dbghelp.h"
 #include "sym_util/symbol_lookup_service.h"
 
 #include <cassert>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "base/scoped_handle.h"
+#include "sym_util/load_dbghelp.h"
 
 namespace {
 

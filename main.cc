@@ -151,7 +151,6 @@ bool ParseOptions(int argc, wchar_t** argv, Options* options) {
 
     // Not an option, push it as a file to process.
     if (!arg.empty() && arg[0] != '-') {
-
       // Check whether the file exists.
       if (!FileExists(arg)) {
         std::wcerr << "File doesn't exist: \"" << arg << "\"" << std::endl;

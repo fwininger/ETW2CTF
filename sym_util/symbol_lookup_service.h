@@ -43,7 +43,7 @@ class SymbolLookupService {
  public:
   SymbolLookupService();
   ~SymbolLookupService();
-  
+
   // Initializes the symbol cache.
   // @returns true if the initialization is successful, false otherwise.
   bool Initialize();
