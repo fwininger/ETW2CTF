@@ -651,7 +651,7 @@ bool ETWConsumer::DecodePayloadField(PEVENT_RECORD pevent,
       data_property_buffer_.resize(property_size);
     ::memset(&data_property_buffer_[0], 0, data_property_buffer_.size());
     PBYTE raw_data = reinterpret_cast<PBYTE>(&data_property_buffer_[0]);
-    
+
     // Retrieve the property.
     status = TdhGetProperty(pevent, 0, NULL, descriptor_count,
                             &data_descriptors[0], property_size, raw_data);

@@ -72,13 +72,13 @@ bool ResolveKernelPath(const std::wstring& path, std::wstring* resolved) {
     // It must start with "\\.\", so add this prefix.
     std::wstring device_path = L"\\\\.\\" + path.substr(kDevicePath.size());
     base::ScopedHandle hFile(::CreateFileW(
-        device_path.c_str(),   // file to open
-        GENERIC_READ,          // open for reading
-        FILE_SHARE_READ,       // share for reading
-        NULL,                  // default security
-        OPEN_EXISTING,         // existing file only
-        FILE_ATTRIBUTE_NORMAL, // normal file
-        NULL));                // no attr. template
+        device_path.c_str(),    // file to open
+        GENERIC_READ,           // open for reading
+        FILE_SHARE_READ,        // share for reading
+        NULL,                   // default security
+        OPEN_EXISTING,          // existing file only
+        FILE_ATTRIBUTE_NORMAL,  // normal file
+        NULL));                 // no attr. template
     if (hFile.get() == INVALID_HANDLE_VALUE)
       return false;
 
@@ -165,7 +165,7 @@ bool SymbolLookupService::EnumerateSymbols(
   assert(initialized_);
   assert(!image.filename.empty());
   assert(callback != NULL);
-  
+
   std::wstring resolved_path;
   if (!ResolveKernelPath(image.filename, &resolved_path)) {
     // If the path as viewed by the kernel cannot be resolved to a user space

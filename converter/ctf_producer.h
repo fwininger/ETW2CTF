@@ -25,8 +25,8 @@
 //
 // Implementation of the CTF stream management.
 
-#ifndef CONVERTER_CTFPRODUCER_H_
-#define CONVERTER_CTFPRODUCER_H_
+#ifndef CONVERTER_CTF_PRODUCER_H_
+#define CONVERTER_CTF_PRODUCER_H_
 
 // Restrict the import to the windows basic includes.
 #define WIN32_LEAN_AND_MEAN
