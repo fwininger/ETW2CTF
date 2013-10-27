@@ -50,6 +50,7 @@
       'sources': [
         # TODO(fdoray): Use .cc extension instead of .cpp.
         'main.cpp',
+        'base/compiler_specific.h',
         'base/disallow_copy_and_assign.h',
         'base/scoped_handle.cc',
         'base/scoped_handle.h',
