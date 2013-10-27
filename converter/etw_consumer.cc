@@ -290,10 +290,6 @@ void ETWConsumer::EncodeEventHeader(const EVENT_HEADER& header,
   // Output stream.context.header_properties.
   packet->EncodeUInt16(header.EventProperty);
   packet->EncodeUInt16(header.EventProperty);
-
-  // Output cpu_id.
-  // TODO(fdoray): Remove this.
-  packet->EncodeUInt8(buffer_context.ProcessorNumber);
 }
 
 void ETWConsumer::EncodePacketHeader(Metadata::Packet* packet) {
@@ -1001,7 +997,6 @@ bool ETWConsumer::SerializeMetadata(std::string* result) const {
       << "  id = 0;\n"
       << "  name = \"unknown\";\n"
       << "  fields := struct {\n"
-      << "    uint8   cpuid;\n"  // TODO(etienneb): May clash with a field.
       << "  };\n"
       << "};\n\n";
 
@@ -1041,8 +1036,7 @@ bool ETWConsumer::SerializeMetadataEvent(const Metadata::Event& descr,
   }
 
   // Event Fields
-  *out <<"  fields := struct {\n"
-       << "    uint8   cpuid;\n";  // TODO(etienneb): May clash with a field.
+  *out <<"  fields := struct {\n";
 
   for (size_t i = 0; i < descr.size(); ++i) {
     if (!SerializeMetadataField(descr, descr.at(i), out))
