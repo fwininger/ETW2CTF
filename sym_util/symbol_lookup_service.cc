@@ -183,12 +183,32 @@ bool SymbolLookupService::EnumerateSymbols(
                           LoadImageCallback,
                           reinterpret_cast<ULONG64>(&image));
 
+  // Disable WOW64 system file redirection so that 64 bits images can be loaded
+  // from a 32 bits build.
+  PVOID disable_redirect_old_value;
+  ::Wow64DisableWow64FsRedirection(&disable_redirect_old_value);
+
+  // Open the image from which to extract the symbols.
+  base::ScopedHandle image_file(::CreateFileW(
+      resolved_path.c_str(),  // file to open
+      GENERIC_READ,           // open for reading
+      FILE_SHARE_READ,        // share for reading
+      NULL,                   // default security
+      OPEN_EXISTING,          // existing file only
+      FILE_ATTRIBUTE_NORMAL,  // normal file
+      NULL));                 // no attr. template
+
+  // Restore WOW64 system file redirection.
+  ::Wow64DisableWow64FsRedirection(&disable_redirect_old_value);
+
+  if (image_file.get() == INVALID_HANDLE_VALUE)
+    return false;
+
   // Load the image and its symbols. This can take a long time if data must
   // be downloaded from a symbol server.
-  DWORD dwRet = ::SymLoadModuleEx(dbghelp_handle_, NULL,
-                                  resolved_path.c_str(), NULL,
-                                  image.base_address, image.size,
-                                  NULL, 0);
+  DWORD dwRet = ::SymLoadModuleEx(dbghelp_handle_, image_file.get(), NULL, NULL,
+                                  image.base_address, image.size, NULL, 0);
+
   // SymLoadModuleEx() returns 0 in case of error, when a module is loaded at
   // address 0 or when the module is already loaded.
   if (dwRet == 0 && ::GetLastError() != ERROR_SUCCESS)
@@ -203,6 +223,7 @@ bool SymbolLookupService::EnumerateSymbols(
 
   // Unload the image information from DbgHelp.
   ::SymUnloadModule64(dbghelp_handle_, image.base_address);
+
   return res;
 }
 
