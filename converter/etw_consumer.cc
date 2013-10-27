@@ -172,9 +172,8 @@ void ETWConsumer::AddPacketToSendingQueue(const Metadata::Packet& packet) {
   assert(packet.size() > packet.event_id_offset());
 
   // Check whether the event id has been updated by fetching it from the packet.
-  assert(
-      *reinterpret_cast<uint32_t*>(packet.raw_bytes()[packet.event_id_offset()])
-      != 0);
+  assert(*reinterpret_cast<const uint32_t*>(
+              packet.raw_bytes() + packet.event_id_offset()) != 0);
 
   packet_total_bytes_ += packet.size();
   packets_.push_back(packet);
