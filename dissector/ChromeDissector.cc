@@ -28,46 +28,41 @@
 #include <cassert>
 
 namespace dissector {
+namespace {
 
-// Head of a linked list of registered dissectors.
-static Dissector* dissectors = NULL;
+// CHROME GUID {b967ae67-bb22-49d7-9406-55d91ee1d560}.
+const GUID kChromeGuid = { 0xB967AE67, 0xBB22, 0x49D7,
+  { 0x94, 0x06, 0x55, 0xD9, 0x1E, 0xE1, 0xD5, 0x60 }};
 
-Dissector::Dissector(const char *name, const char *descr)
-    : name_(name), descr_(descr), next_(NULL) {
-  assert(name != NULL);
-  assert(descr != NULL);
+class ChromeDissector : public Dissector {
+ public:
+  ChromeDissector()
+      : Dissector("Chrome", "Decode Chrome EVENT_TRACE payload.") {
+  }
 
-  // Register the dissector in the global linked list.
-  this->next_ = dissectors;
-  dissectors = this;
-}
+  bool DecodePayload(const GUID& guid,
+                     uint32_t opcode,
+                     char* payload,
+                     uint32_t length,
+                     converter::Metadata::Packet* packet,
+                     converter::Metadata::Event* descr);
+} chrome;
 
-bool DecodePayloadWithDissectors(const GUID& guid,
-                                 uint32_t opcode,
-                                 char* payload,
-                                 uint32_t length,
-                                 converter::Metadata::Packet* packet,
-                                 converter::Metadata::Event* descr) {
+bool ChromeDissector::DecodePayload(const GUID& guid,
+                                    uint32_t opcode,
+                                    char* payload,
+                                    uint32_t length,
+                                    converter::Metadata::Packet* packet,
+                                    converter::Metadata::Event* descr) {
+  if (!IsEqualGUID(guid, kChromeGuid))
+    return false;
+
   assert(packet != NULL);
   assert(descr != NULL);
 
-  Dissector* it = dissectors;
-  size_t payload_position = packet->size();
-
-  while (it != NULL) {
-    // Try to decode using this dissector.
-    if (it->DecodePayload(guid, opcode, payload, length, packet, descr))
-      return true;
-
-    // Reset the packet state before decoding failure.
-    descr->Reset();
-    packet->Reset(payload_position);
-
-    // Move to the next dissector.
-    it = it->next();
-  }
-
+  // TODO(etienneb): Implement this function.
   return false;
 }
 
+}  // namespace
 }  // namespace dissector

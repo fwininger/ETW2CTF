@@ -59,6 +59,7 @@
         'converter/etw_consumer.h',
         'converter/metadata.cc',
         'converter/metadata.h',
+        'dissector/ChromeDissector.cc',
         'dissector/dissectors.cc',
         'dissector/dissectors.h',
         'etw_observer/etw_observer.cc',
