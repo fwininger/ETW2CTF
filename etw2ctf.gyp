@@ -51,6 +51,7 @@
         'main.cc',
         'base/compiler_specific.h',
         'base/disallow_copy_and_assign.h',
+        'base/logging.h',
         'base/scoped_handle.cc',
         'base/scoped_handle.h',
         'converter/ctf_producer.cc',
