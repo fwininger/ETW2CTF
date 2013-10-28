@@ -14,8 +14,8 @@ To run the software requires the Windows Performance Toolkit.
 
 Instructions:
 
-Generate a Visual Studio project using gyp.
-1. Get gyp using SVN. `svn co http://gyp.googlecode.com/svn/trunk gyp`
+Generate a Visual Studio project using gyp. <br/>
+1. Get gyp using SVN. `svn co http://gyp.googlecode.com/svn/trunk gyp` <br/>
 2. Run gyp. `gyp\gyp --depth=. etw2ctf.gyp`
 
 Compile the code with Visual Studio 2010 (or later)
