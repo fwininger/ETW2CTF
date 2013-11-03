@@ -31,7 +31,6 @@
 #include <vector>
 
 #include "base/scoped_handle.h"
-#include "sym_util/load_dbghelp.h"
 
 namespace {
 
@@ -138,15 +137,6 @@ SymbolLookupService::~SymbolLookupService() {
 bool SymbolLookupService::Initialize() {
   if (initialized_)
     return true;
-
-  if (!LoadDbgHelp()) {
-    std::wcerr << L"Unable to load dbghelp.dll from the Windows Performance "
-                  L"Toolkit installation. The library installed with Windows "
-                  L"will be used instead. Only symbols that are available "
-                  L"locally will be resolved." << std::endl;
-    // If LoadDbgHelp() hasn't loaded any library, the DbgHelp library installed
-    // with Windows will be loaded automatically.
-  }
 
   DWORD options = ::SymGetOptions();
   options |= SYMOPT_EXACT_SYMBOLS | SYMOPT_DEBUG;

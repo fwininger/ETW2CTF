@@ -32,6 +32,9 @@
           'VCCLCompilerTool': {
             'RuntimeLibrary': 1,  # Static debug.
           },
+          'VCCLCompilerTool': {
+            'Optimization': '0',
+          },
         },
       },
       'Release': {

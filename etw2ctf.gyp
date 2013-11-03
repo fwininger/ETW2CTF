@@ -38,13 +38,6 @@
             'dbghelp.lib',
             'tdh.lib',
           ],
-          'DelayLoadDLLs': [
-            # Delay loading dbghelp.dll so that the library installed with
-            # Windows Performance Toolkit can be loaded programmatically instead
-            # of the default one. This is important because the default library
-            # cannot communicate with a symbol server.
-            'dbghelp.dll',
-          ],
         },
       },
       'sources': [
@@ -70,11 +63,25 @@
         'etw_observer/symbols_observer.cc',
         'sym_util/image.cc',
         'sym_util/image.h',
-        'sym_util/load_dbghelp.cc',
-        'sym_util/load_dbghelp.h',
         'sym_util/symbol_lookup_service.cc',
         'sym_util/symbol_lookup_service.h',
       ],
+      'dependencies': [
+        'output_dlls',
+      ],
+    }, {
+      # The dbghelp and symsrv DLLs distributed with ETW2CTF are needed to
+      # communicate with a symbol server. Copy them to the output directory to
+      # make sure that they are used by the converter.
+      'target_name': 'output_dlls',
+      'type': 'none',
+      'copies': [{
+        'destination': '<(PRODUCT_DIR)',
+        'files': [
+          '<(DEPTH)/third_party/debugging_tools/x86/dbghelp.dll',
+          '<(DEPTH)/third_party/debugging_tools/x86/symsrv.dll',
+        ],
+      }],
     },
   ]
 }
