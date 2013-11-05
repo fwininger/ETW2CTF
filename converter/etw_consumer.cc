@@ -386,20 +386,23 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   Metadata::Event descr;
   size_t payload_position = packet.size();
 
-  if (!DecodePayload(pevent, &packet, &descr)) {
-    // On failure, remove packet data and metadata.
-    descr.Reset();
-    packet.Reset(payload_position);
+  // Try to decode the payload using a dissector.
+  const GUID& guid = pevent->EventHeader.ProviderId;
+  uint32_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
+  char* data = static_cast<char*>(pevent->UserData);
+  uint32_t length = pevent->UserDataLength;
+  if (!dissector::DecodePayloadWithDissectors(guid, opcode, data, length,
+                                              &packet, &descr)) {
+    // The above function should reset |descr| and |packet| in case of failure.
+    assert(descr.size() == 0);
+    assert(packet.size() == payload_position);
 
-    // Try to decode the payload using a dissector.
-    const GUID& guid = pevent->EventHeader.ProviderId;
-    uint32_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
-    char* data = static_cast<char*>(pevent->UserData);
-    uint32_t length = pevent->UserDataLength;
-    bool decoded = dissector::DecodePayloadWithDissectors(guid, opcode, data,
-                                                          length, &packet,
-                                                          &descr);
-    if (!decoded) {
+    // Try to decode the payload using trace data helper (TDH).
+    if (!DecodePayload(pevent, &packet, &descr)) {
+      // On failure, remove packet data and metadata.
+      descr.Reset();
+      packet.Reset(payload_position);
+
       // Send the raw payload.
       if (!SendRawPayload(pevent, &packet, &descr))
         return false;

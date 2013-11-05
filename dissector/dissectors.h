@@ -24,6 +24,9 @@
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 // A dissector is a helper class able to decode a specific kind of payload.
+// Dissectors are the first to have the opportunity to try to decode the payload
+// of an event.
+//
 // Dissectors use a self registry mechanism. Do not instantiate a dissector
 // with new. Only static instantiation will work safely.
 //
