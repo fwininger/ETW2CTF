@@ -43,11 +43,12 @@ Dissector::Dissector(const char *name, const char *descr)
 }
 
 bool DecodePayloadWithDissectors(const GUID& guid,
-                                 uint32_t opcode,
+                                 uint8_t opcode,
                                  char* payload,
                                  uint32_t length,
                                  converter::Metadata::Packet* packet,
                                  converter::Metadata::Event* descr) {
+  assert(payload != NULL);
   assert(packet != NULL);
   assert(descr != NULL);
 

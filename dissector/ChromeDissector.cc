@@ -41,7 +41,7 @@ class ChromeDissector : public Dissector {
   }
 
   bool DecodePayload(const GUID& guid,
-                     uint32_t opcode,
+                     uint8_t opcode,
                      char* payload,
                      uint32_t length,
                      converter::Metadata::Packet* packet,
@@ -49,7 +49,7 @@ class ChromeDissector : public Dissector {
 } chrome;
 
 bool ChromeDissector::DecodePayload(const GUID& guid,
-                                    uint32_t opcode,
+                                    uint8_t opcode,
                                     char* payload,
                                     uint32_t length,
                                     converter::Metadata::Packet* packet,

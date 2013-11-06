@@ -388,7 +388,7 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
 
   // Try to decode the payload using a dissector.
   const GUID& guid = pevent->EventHeader.ProviderId;
-  uint32_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
+  uint8_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
   char* data = static_cast<char*>(pevent->UserData);
   uint32_t length = pevent->UserDataLength;
   if (!dissector::DecodePayloadWithDissectors(guid, opcode, data, length,

@@ -41,6 +41,8 @@
 #ifndef DISSECTOR_DISSECTORS_H_
 #define DISSECTOR_DISSECTORS_H_
 
+#include <cstdint>
+
 #include "converter/metadata.h"
 
 namespace dissector {
@@ -64,7 +66,7 @@ class Dissector {
   // @param descr the metadata describing the decoded payload.
   // @returns true on success, false on failure.
   virtual bool DecodePayload(const GUID& guid,
-                             uint32_t opcode,
+                             uint8_t opcode,
                              char* payload,
                              uint32_t length,
                              converter::Metadata::Packet* packet,
@@ -93,7 +95,7 @@ class Dissector {
 // @param descr the metadata describing the decoded payload.
 // @returns true on success, false on failure.
 bool DecodePayloadWithDissectors(const GUID& guid,
-                                 uint32_t opcode,
+                                 uint8_t opcode,
                                  char* payload,
                                  uint32_t payload_length,
                                  converter::Metadata::Packet* packet,
