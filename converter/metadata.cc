@@ -30,6 +30,8 @@
 
 namespace converter {
 
+const size_t Metadata::kRootScope = static_cast<size_t>(-1);
+
 bool Metadata::Event::operator==(const Event& event) const {
   if (guid_ != event.guid_ ||
       opcode_ != event.opcode_ ||

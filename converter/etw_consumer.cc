@@ -36,8 +36,6 @@ namespace converter {
 
 namespace {
 
-const size_t kRootScope = static_cast<size_t>(-1);
-
 // Specify to CTF consumer that source come from ETW.
 // ETW2CTF GUID {29cb3580-13c6-4c85-a4cb-a2c0ffa68890}.
 const GUID ETWConverterGuid = { 0x29CB3580, 0x13C6, 0x4C85,
@@ -428,7 +426,7 @@ bool ETWConsumer::SendRawPayload(PEVENT_RECORD pevent,
   // Get raw data pointer and size.
   USHORT length = pevent->UserDataLength;
   PVOID data = pevent->UserData;
-  const size_t parent = kRootScope;
+  const size_t parent = Metadata::kRootScope;
 
   // Create the metadata fields.
   typedef Metadata::Field Field;
@@ -451,7 +449,7 @@ bool ETWConsumer::DecodePayload(
   assert(descr != NULL);
 
   // Assume initial scope is the root scope.
-  const size_t parent = kRootScope;
+  const size_t parent = Metadata::kRootScope;
 
   // If the EVENT_HEADER_FLAG_STRING_ONLY flag is set, the event data is a
   // null-terminated string. Those events are generated via EventWriteString
@@ -1071,7 +1069,8 @@ bool ETWConsumer::SerializeMetadataField(const Metadata::Event& descr,
   assert(out != NULL);
 
   // Indent this field.
-  for (size_t p = field.parent(); p != kRootScope; p = descr.at(p).parent()) {
+  for (size_t p = field.parent(); p != Metadata::kRootScope;
+       p = descr.at(p).parent()) {
     const Metadata::Field::FieldType type = descr.at(p).type();
     if (type == Metadata::Field::STRUCT_BEGIN)
       *out << "  ";
@@ -1144,7 +1143,8 @@ bool ETWConsumer::SerializeMetadataField(const Metadata::Event& descr,
   }
 
   // Output the aggregate declaration suffix.
-  for (size_t p = field.parent(); p != kRootScope; p = descr.at(p).parent()) {
+  for (size_t p = field.parent(); p != Metadata::kRootScope;
+       p = descr.at(p).parent()) {
     const Metadata::Field& parent = descr.at(p);
     if (parent.type() == Metadata::Field::ARRAY_FIXED) {
       *out << "[" << parent.size() << "]";

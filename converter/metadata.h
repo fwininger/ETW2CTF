@@ -70,6 +70,9 @@ class Metadata {
     return events_.at(event_id);
   }
 
+  // Parent id for fields in the root scope.
+  static const size_t kRootScope;
+
  private:
   // Dictionary of event definitions.
   // The event id is the offset in this vector.

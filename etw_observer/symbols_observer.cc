@@ -102,9 +102,6 @@ const char* kImageChecksumFieldName = "ImageChecksum";
 const char* kImageTimestampFieldName = "TimeDateStamp";
 const char* kImageFileNameFieldName = "FileName";
 
-// Root scope for event payload fields.
-const size_t kRootScope = static_cast<size_t>(-1);
-
 // Parameter for the callback used to enumerate the symbols of an image.
 struct EnumerateSymbolsCallbackParams {
   // Identifier of the image that is being processed.
@@ -142,19 +139,22 @@ BOOL CALLBACK EnumerateSymbolsCallback(PCWSTR SymbolName,
   descr.set_name(kSymbolInfoEventName);
 
   descr.AddField(Metadata::Field(Metadata::Field::XINT64,
-                                 kImageIdentifierFieldName, kRootScope));
+                                 kImageIdentifierFieldName,
+                                 Metadata::kRootScope));
   packet.EncodeUInt64(params->image_id);
 
   // TODO(fdoray): Support Unicode.
   descr.AddField(Metadata::Field(Metadata::Field::STRING,
-                                 kSymbolNameFieldName, kRootScope));
+                                 kSymbolNameFieldName,
+                                 Metadata::kRootScope));
   std::wstring symbol_name_wstr(SymbolName);
   std::string symbol_name_str(symbol_name_wstr.begin(),
                               symbol_name_wstr.end());
   packet.EncodeString(symbol_name_str);
 
   descr.AddField(Metadata::Field(Metadata::Field::XINT64,
-                                 kSymbolAddressFieldName, kRootScope));
+                                 kSymbolAddressFieldName,
+                                 Metadata::kRootScope));
   packet.EncodeUInt64(SymbolAddress);
 
   consumer->FinalizePacket(descr, &packet);
@@ -285,29 +285,33 @@ void SymbolsObserver::OnEndProcessEvent(ETWConsumer* consumer,
 
   // Populate packet fields.
   descr.AddField(Metadata::Field(Metadata::Field::XINT64,
-                                 kImageBaseFieldName, kRootScope));
+                                 kImageBaseFieldName, Metadata::kRootScope));
   packet.EncodeUInt64(image_.base_address);
 
   descr.AddField(Metadata::Field(Metadata::Field::UINT64,
-                                 kImageSizeFieldName, kRootScope));
+                                 kImageSizeFieldName, Metadata::kRootScope));
   packet.EncodeUInt64(image_.size);
 
   descr.AddField(Metadata::Field(Metadata::Field::UINT32,
-                                 kImageChecksumFieldName, kRootScope));
+                                 kImageChecksumFieldName,
+                                 Metadata::kRootScope));
   packet.EncodeUInt32(image_.checksum);
 
   descr.AddField(Metadata::Field(Metadata::Field::UINT32,
-                                 kImageTimestampFieldName, kRootScope));
+                                 kImageTimestampFieldName,
+                                 Metadata::kRootScope));
   packet.EncodeUInt32(image_.timestamp);
 
   // TODO(fdoray): Support Unicode.
   descr.AddField(Metadata::Field(Metadata::Field::STRING,
-                                 kImageFileNameFieldName, kRootScope));
+                                 kImageFileNameFieldName,
+                                 Metadata::kRootScope));
   std::string filename(image_.filename.begin(), image_.filename.end());
   packet.EncodeString(filename);
 
   descr.AddField(Metadata::Field(Metadata::Field::XINT64,
-                                 kImageIdentifierFieldName, kRootScope));
+                                 kImageIdentifierFieldName,
+                                 Metadata::kRootScope));
   packet.EncodeUInt64(processed_images_.size());
 
   // Push the generated event to the sending queue.
