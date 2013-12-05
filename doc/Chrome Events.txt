@@ -1,0 +1,82 @@
+--- About Chrome events ---
+
+A Chrome event is identified by its type, name and categories. The type
+indicates the semantic of the event. Possible values are listed in the "Chrome
+event types" section below. The name indicates the origin of the event (it's
+usually the name of the function that issued it). The categories indicate the
+modules to which the event is related (e.g. base, skia, v8). Chrome allows a
+single event to have multiple categories.
+
+Each event has an identifier to help identify related events (e.g. a pair of
+begin/end events). Related events share the same identifier. Event types that
+are listed together in the list below can be related.
+
+Optionally, an event can have up to 2 arguments and a stack trace. An argument
+has a label and a value, which are both strings. A stack trace is a list of the
+stack frames that were on the stack when the event was issued.
+
+Sample trace point:
+    TRACE_EVENT0("category", "event_name", "arg_name", "arg_value");
+
+For more details, see
+    https://code.google.com/p/chromium/codesearch#chromium/src/base/debug/trace_event.h
+
+--- Chrome event types --- 
+
+- ChromeBegin / ChromeEnd : Pair of events that indicate the beginning and end
+  of an action. They are issued from the same scope and consequently the same
+  thread. The identifier of these events is 0 since it’s easy to deduce the
+  pairs.
+- ChromeInstant : Instant event that can be issued at any time.
+- ChromeFlowBegin / ChromeFlowEnd / ChromeFlowStep : Indicate the beginning and
+  end of an action, with optional steps during it. They can be issued from
+  different threads or processes. A trace viewer should display arrows between
+  related events of these types.
+- ChromeAsyncBegin / ChromeAsyncEnd / ChromeAsyncStep : Same as "flow" but
+  without arrows.
+- ChromeCreateObject / ChromeSnapshotObject / ChromeDeleteObject: Provide
+  information about the life of an object.
+- ChromeMetadata: Information to help display the trace properly.
+- ChromeCounter: Tracks a quantity. Events that come from different processes
+  are not related to the same counter. The value(s) of the counter are
+  outputted in the arguments.
+- ChromeSample: Statistics about tracing.
+
+--- Chrome events in ETW ---
+
+The ETW opcode is used to provide many information about an event. The 4 MSB
+are the identifier of the Chrome internal event type. The next bit indicates
+whether the event contains a stack trace. Finally, the 3 LSB are an unsigned
+integer indicating the number of arguments.
+
+The format of the payload of Chrome events is:
+
+Name: zero-terminated ASCII string.
+Identifier: 64 bits unsigned integer.
+Categories: zero-terminated ASCII string which is a comma-separated list of
+    categories.
+For each extra argument, a "name" followed by a "value", both
+    zero-terminated ASCII strings.
+Optionally the stack trace, consisting of a 32 bits unsigned int "stack size",
+    followed by an array of 32 bits pointers (machine bitness) of length
+    "stack size".
+
+--- Chrome events in CTF ---
+
+The format a Chrome event in CTF is:
+
+ event {
+  id = ...CTF identifier for the event type within the stream...;
+  name = "...Name of the Chrome event type...";
+  fields := struct {
+    string  name;
+    xint64  id;
+    string  categories;
+    struct  {                    // Optional.
+      string  arg_name;
+      string  arg_value;
+      } arguments[...number of arguments...];
+    uint32  stack_size;          // Optional.
+    xint32  stack[stack_size];   // Optional.
+  };
+};

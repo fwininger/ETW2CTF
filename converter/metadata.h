@@ -184,6 +184,10 @@ class Metadata::Field {
   Field() : type_(INVALID), size_(0), parent_(0) {
   }
 
+  Field(FieldType type, const std::string& name)
+      : type_(type), name_(name), size_(0), parent_(kRootScope) {
+  }
+
   Field(FieldType type, const std::string& name, size_t parent)
       : type_(type), name_(name), size_(0), parent_(parent) {
   }
