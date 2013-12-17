@@ -42,13 +42,12 @@ Dissector::Dissector(const char *name, const char *descr)
   dissectors = this;
 }
 
-bool DecodePayloadWithDissectors(const GUID& guid,
-                                 uint8_t opcode,
-                                 char* payload,
-                                 uint32_t length,
-                                 converter::Metadata::Packet* packet,
-                                 converter::Metadata::Event* descr) {
-  assert(payload != NULL);
+bool DecodeEventWithDissectors(const GUID& guid,
+                               uint8_t opcode,
+                               char* payload,
+                               uint32_t payload_length,
+                               converter::Metadata::Packet* packet,
+                               converter::Metadata::Event* descr) {
   assert(packet != NULL);
   assert(descr != NULL);
 
@@ -57,7 +56,7 @@ bool DecodePayloadWithDissectors(const GUID& guid,
 
   while (it != NULL) {
     // Try to decode using this dissector.
-    if (it->DecodePayload(guid, opcode, payload, length, packet, descr))
+    if (it->DecodeEvent(guid, opcode, payload, payload_length, packet, descr))
       return true;
 
     // Reset the packet state before decoding failure.

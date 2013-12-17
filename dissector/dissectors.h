@@ -23,9 +23,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// A dissector is a helper class able to decode a specific kind of payload.
-// Dissectors are the first to have the opportunity to try to decode the payload
-// of an event.
+// A dissector is a helper class able to decode a specific kind of event.
+// Dissectors are the first to have the opportunity to try to decode each event.
 //
 // Dissectors use a self registry mechanism. Do not instantiate a dissector
 // with new. Only static instantiation will work safely.
@@ -35,7 +34,7 @@
 //   public:
 //    DummyDissector()
 //        : Dissector("Dummy", "Dummy example.") {}
-//    bool DecodePayload(...) { ... }
+//    bool DecodeEvent(...) { ... }
 // } dummy; // Performs the auto registry.
 
 #ifndef DISSECTOR_DISSECTORS_H_
@@ -56,21 +55,22 @@ class Dissector {
   // @param descr description of the dissector.
   Dissector(const char* name, const char* descr);
 
-  // Try to decode the given payload with this dissector. This method must be
+  // Try to decode the given event with this dissector. This method must be
   // implemented for each dissector.
   // @param guid the provider GUID for the payload.
   // @param opcode the opcode (command) for the payload.
-  // @param payload the raw payload to decode.
-  // @param length the length of the payload in bytes.
+  // @param payload the raw payload to decode. Can be NULL if the event has no
+  //    payload.
+  // @param payload_length the length of the payload in bytes.
   // @param packet the CTF packet to receive the decoded payload.
   // @param descr the metadata describing the decoded payload.
   // @returns true on success, false on failure.
-  virtual bool DecodePayload(const GUID& guid,
-                             uint8_t opcode,
-                             char* payload,
-                             uint32_t length,
-                             converter::Metadata::Packet* packet,
-                             converter::Metadata::Event* descr) = 0;
+  virtual bool DecodeEvent(const GUID& guid,
+                           uint8_t opcode,
+                           char* payload,
+                           uint32_t payload_length,
+                           converter::Metadata::Packet* packet,
+                           converter::Metadata::Event* descr) = 0;
 
   Dissector* next() const { return next_; }
 
@@ -85,21 +85,21 @@ class Dissector {
   Dissector* next_;
 };
 
-// Try to decode the given payload with each registered dissector, returning on
+// Try to decode the given event with each registered dissector, returning on
 // the first one that succeeds. Returns false if no dissectors were successful.
 // @param guid the provider GUID for the payload.
 // @param opcode the opcode (command) for the payload.
 // @param payload the raw payload to decode.
-// @param length the length of the payload in bytes.
+// @param payload_length the length of the payload in bytes.
 // @param packet the CTF packet to receive the decoded payload.
 // @param descr the metadata describing the decoded payload.
 // @returns true on success, false on failure.
-bool DecodePayloadWithDissectors(const GUID& guid,
-                                 uint8_t opcode,
-                                 char* payload,
-                                 uint32_t payload_length,
-                                 converter::Metadata::Packet* packet,
-                                 converter::Metadata::Event* descr);
+bool DecodeEventWithDissectors(const GUID& guid,
+                               uint8_t opcode,
+                               char* payload,
+                               uint32_t payload_length,
+                               converter::Metadata::Packet* packet,
+                               converter::Metadata::Event* descr);
 
 }  // namespace dissector
 

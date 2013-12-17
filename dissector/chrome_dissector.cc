@@ -97,27 +97,26 @@ class ChromeDissector : public dissector::Dissector {
   }
 
   // Overrides dissector::Dissector.
-  bool DecodePayload(const GUID& guid,
-                     uint8_t opcode,
-                     char* payload,
-                     uint32_t length,
-                     Metadata::Packet* packet,
-                     Metadata::Event* descr) OVERRIDE;
+  bool DecodeEvent(const GUID& guid,
+                   uint8_t opcode,
+                   char* payload,
+                   uint32_t payload_length,
+                   Metadata::Packet* packet,
+                   Metadata::Event* descr) OVERRIDE;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ChromeDissector);
 } chrome;
 
-bool ChromeDissector::DecodePayload(const GUID& guid,
-                                    uint8_t opcode,
-                                    char* payload,
-                                    uint32_t length,
-                                    Metadata::Packet* packet,
-                                    Metadata::Event* descr) {
-  if (!IsEqualGUID(guid, kChromeGuid))
+bool ChromeDissector::DecodeEvent(const GUID& guid,
+                                  uint8_t opcode,
+                                  char* payload,
+                                  uint32_t payload_length,
+                                  Metadata::Packet* packet,
+                                  Metadata::Event* descr) {
+  if (!IsEqualGUID(guid, kChromeGuid) || payload == NULL)
     return false;
 
-  assert(payload != NULL);
   assert(packet != NULL);
   assert(descr != NULL);
 
@@ -136,16 +135,16 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
   uint32_t offset = 0;
 
   // Decode the event name.
-  if (offset + 1 > length)
+  if (offset + 1 > payload_length)
     return false;
-  std::string event_name(&payload[offset], 0, length - offset - 1);
+  std::string event_name(&payload[offset], 0, payload_length - offset - 1);
   offset += event_name.size() + 1;
 
   descr->AddField(Metadata::Field(Metadata::Field::STRING, kChromeNameField));
   packet->EncodeString(event_name);
 
   // Decode the event id.
-  if (offset + sizeof(uint64_t) > length)
+  if (offset + sizeof(uint64_t) > payload_length)
     return false;
   uint64_t event_id = *reinterpret_cast<uint64_t*>(&payload[offset]);
   offset += sizeof(uint64_t);
@@ -154,9 +153,10 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
   packet->EncodeUInt64(event_id);
 
   // Decode the categories.
-  if (offset + 1 > length)
+  if (offset + 1 > payload_length)
     return false;
-  std::string event_categories(&payload[offset], 0, length - offset - 1);
+  std::string event_categories(&payload[offset], 0,
+                               payload_length - offset - 1);
   offset += event_categories.size() + 1;
 
   descr->AddField(Metadata::Field(Metadata::Field::STRING,
@@ -187,16 +187,18 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
 
     for (int i = 0; i < num_args; ++i) {
       // Decode the argument name.
-      if (offset + 1 > length)
+      if (offset + 1 > payload_length)
         return false;
-      std::string argument_name(&payload[offset], 0, length - offset - 1);
+      std::string argument_name(&payload[offset], 0,
+                                payload_length - offset - 1);
       offset += argument_name.size() + 1;
       packet->EncodeString(argument_name);
 
       // Decode the argument value.
-      if (offset + 1 > length)
+      if (offset + 1 > payload_length)
         return false;
-      std::string argument_value(&payload[offset], 0, length - offset - 1);
+      std::string argument_value(&payload[offset], 0,
+                                 payload_length - offset - 1);
       offset += argument_value.size() + 1;
       packet->EncodeString(argument_value);
     }
@@ -204,7 +206,7 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
 
   if (opcode & kChromeOpcodeStackMask) {
     // Stack size.
-    if (offset + sizeof(uint32_t) > length)
+    if (offset + sizeof(uint32_t) > payload_length)
       return false;
     uint32_t stack_size = *reinterpret_cast<uint32_t*>(&payload[offset]);
     offset += sizeof(uint32_t);
@@ -222,7 +224,7 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
                                     stack_pointers_parent));
 
     size_t stack_size_bytes = stack_size * sizeof(uint32_t);
-    if (offset + stack_size_bytes > length)
+    if (offset + stack_size_bytes > payload_length)
       return false;
     packet->EncodeBytes(reinterpret_cast<uint8_t*>(&payload[offset]),
                         stack_size_bytes);
@@ -231,7 +233,7 @@ bool ChromeDissector::DecodePayload(const GUID& guid,
   }
 
   // Check whether some data has not been decoded.
-  if (offset != length)
+  if (offset != payload_length)
     return false;
 
   return true;

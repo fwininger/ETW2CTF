@@ -389,8 +389,8 @@ bool ETWConsumer::ProcessEventInternal(PEVENT_RECORD pevent) {
   uint8_t opcode = pevent->EventHeader.EventDescriptor.Opcode;
   char* data = static_cast<char*>(pevent->UserData);
   uint32_t length = pevent->UserDataLength;
-  if (!dissector::DecodePayloadWithDissectors(guid, opcode, data, length,
-                                              &packet, &descr)) {
+  if (!dissector::DecodeEventWithDissectors(guid, opcode, data, length,
+                                            &packet, &descr)) {
     // The above function should reset |descr| and |packet| in case of failure.
     assert(descr.size() == 0);
     assert(packet.size() == payload_position);
